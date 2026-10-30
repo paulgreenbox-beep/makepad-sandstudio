@@ -16,7 +16,7 @@
 
 MSS is intended to let independent AI agents work with separate Makepad applications at the same time. Each session is planned to own a distinct application process, control channel, test worker, render stream, state, and evidence directory. The native MSS desktop is planned as a tabbed workspace with session state on the left and the selected application's rendered view on the right.
 
-The repository contains a seven-crate Rust workspace and a native Makepad Desktop shell. The Desktop renders an illustrative three-slot sidebar and a no-frame placeholder; it is not connected to sessions, app capture, tests or MSS_API. Core/API/Remote/Render now compose a tested in-process logical registry, authorization/refusal gate and supplied-PNG cache. This does not implement app lifecycle, native command delivery, GPU capture, Toolkit execution, MCP transport or an OS sandbox. See the [PR #1–#4 integration report](doc/integration-pr1-4.md) for exact source, checks and limits.
+The repository contains a seven-crate Rust workspace and a native Makepad Desktop shell. The Desktop renders an illustrative three-slot sidebar and a no-frame placeholder; it is not connected to sessions, app capture, tests or MSS_API. Core/API/Remote/Render compose an in-process logical registry, authorization/refusal gate and supplied-PNG cache, with historical test results bound to their exact source revisions. This does not implement app lifecycle, native command delivery, GPU capture, Toolkit execution, MCP transport or an OS sandbox. See the [PR #1–#4 integration report](doc/integration-pr1-4.md) for exact source, checks and limits.
 
 ## Non-negotiable constraints
 
@@ -36,7 +36,7 @@ See [architecture](doc/architecture.md), [testing and parity](doc/testing.md), [
 | Module | Responsibility | Current state |
 |---|---|---|
 | MSS_Core | Session, agent, process and resource ownership | Logical scoped registry TESTED; native lifecycle NOT_VERIFIED |
-| MSS_Remote | Session-addressed Makepad commands and result checks | Admission/refusal TESTED; transport NOT_IMPLEMENTED |
+| MSS_Remote | Session-addressed Makepad commands and result checks | Admission/refusal baseline tested; latest Rust regressions NOT_RUN; transport NOT_IMPLEMENTED |
 | MSS_Render | App-originated frames through API to Desktop | Supplied-PNG cache TESTED; native capture NOT_IMPLEMENTED |
 | MSS_SDK | Typed app integration, widget state and telemetry | NOT_VERIFIED |
 | MSS_MCP | Thin standard MCP adapters over the common API | NOT_VERIFIED |
@@ -81,3 +81,11 @@ Every stage remains unaccepted until its required evidence is recorded.
 ## Existing Desktop shell
 
 The source in [MSS_Desktop/src/main.rs](MSS_Desktop/src/main.rs) renders a visual shell using the Makepad revision pinned in [MSS_Desktop/Cargo.toml](MSS_Desktop/Cargo.toml). Its session entries and status are illustrative. It launches no child app and proves no real session, frame, or Toolkit operation.
+
+## Independent product boundary and current follow-up
+
+CWG is an external development-message service, not an MSS dependency or acceptance authority. MSS_MCP is the GUI API adapter, not CWG_MCP. Project GOAL definitions, Toolkit tests and native verification/evidence obligations stay in MSS. See [the separation decision](doc/cwg-separation.md) and [pinned scope policy](doc/plans/mss-scope-v2.json).
+
+This combined source includes the #10 foundation, repaired #11 Unicode fixtures and the hardened #12 boundary checks. Historical TESTED labels above refer to the original integration receipt; **Rust build/test/format/Clippy at this combined HEAD remains NOT_RUN**. See [the current source follow-up](doc/product-source-followup.md) for provenance, checks and remaining gates. Do not reuse an earlier PASS for changed source.
+
+The [scope checker](scripts/mss_scope.py) verifies the master-plan projection and can inspect tracked paths and Cargo declarations without executing Cargo. It refuses known CWG implementation imports while keeping all 112 Toolkit operations and native obligations. It is repository hygiene, not an OS sandbox or runtime qualification.
