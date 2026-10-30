@@ -1,0 +1,30 @@
+{
+  "schema": "mss-goal-v1",
+  "id": "MSS-003",
+  "title": "Build complete parity matrix against Toolkit",
+  "module_ids": [
+    "mss.api",
+    "mss.remote",
+    "mss.render"
+  ],
+  "status": "TODO",
+  "branch": null,
+  "pr_url": null,
+  "owner_agent": null,
+  "source_commit": null,
+  "dependencies": [],
+  "acceptance": [
+    "Pin exact Toolkit revision and operations.json",
+    "List every public operation without omissions",
+    "Map semantics, independent postconditions and evidence",
+    "Do not count unsupported operations as PASS"
+  ],
+  "required_checks": [
+    {
+      "id": "TOOLKIT_PARITY",
+      "status": "NOT_RUN",
+      "evidence_ref": null
+    }
+  ],
+  "notes": "Parity execution is not yet implemented."
+}
