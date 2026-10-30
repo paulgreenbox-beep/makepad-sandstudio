@@ -1,0 +1,20 @@
+{
+  "schema": "mss-goal-v1",
+  "id": "MSS-004",
+  "title": "Prepare a fail-closed GitHub Issue to Codex dispatcher",
+  "module_ids": ["mss.skills"],
+  "status": "IN_PROGRESS",
+  "branch": "codex/github-issue-dispatcher",
+  "pr_url": null,
+  "owner_agent": "codex-integration",
+  "source_commit": null,
+  "dependencies": [],
+  "acceptance": [
+    "Trusted label sender authorization, replay fencing and validated existing GOAL routing",
+    "Only physical self-hosted Windows runners and independently approved native restrictions",
+    "Draft PR publication and source-bound evidence without automatic merge or VERIFIED",
+    "Model-free regression tests and a clear disabled-by-default setup guide"
+  ],
+  "required_checks": [{"id": "CODEX_DISPATCH_TESTS", "status": "NOT_RUN", "evidence_ref": null}],
+  "notes": "Direct owner task in Codex chat; implementation is stacked on PR #5. No live model execution authorized."
+}

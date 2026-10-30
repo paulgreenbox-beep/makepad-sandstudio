@@ -1,5 +1,11 @@
 # Verification and parity plan
 
+## Issue dispatcher checks
+
+Owner module: `mss.skills`; GOAL: `MSS-004`. The cheapest sufficient first proof is `node --test scripts/codex-issue/test/dispatcher.test.mjs`. It exercises authorization, routing, replay, source/evidence binding, protected paths, workflow security contracts, and the real collection stage with a failed-model fixture. It makes no model calls. YAML syntax and parsed job/permission contracts are checked separately by `node scripts/codex-issue/validate-workflow.mjs <installed-yaml-module>` using an existing YAML 1.2 parser. `node --check` validates helper syntax. Exact results belong in the source-bound receipt under `goals/events/`.
+
+Rust sources are unchanged by this dispatcher task. Cargo, app runtime, native sandbox, broker execution, real Actions dispatch and Toolkit parity checks are NOT_RUN here; unit and workflow checks do not establish those contracts. Native isolation and live integration remain NOT_VERIFIED. See [setup and blockers](codex-issue-runner.md).
+
 **No MSS native GUI or Toolkit parity tests have run at scaffold creation.**
 
 ## Baseline

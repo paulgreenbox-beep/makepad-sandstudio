@@ -21,3 +21,7 @@ An AI agent, app, plugin or test script may send unwanted input, access foreign 
 Windows Job Objects enable process lifetime control but do **not** provide filesystem/network isolation. Any stronger claims require independently validated OS security controls, compatible with the no-VM/no-container requirement.
 
 Report security concerns privately to the repository owner. Do not include credentials or private session traces in issues.
+
+## GitHub Issue worker
+
+The [Issue dispatcher](doc/codex-issue-runner.md) is disabled by default. Its trusted control jobs and untrusted generation/check execution require separate accounts, physical runners and independently verified native Windows restrictions. An allowlisted label sender is not a grant of unrestricted host access. The action's Windows `unsafe` strategy omits privilege reduction; only the separately provisioned native elevated sandbox and reviewed host policy may provide the required boundary. Never enable the route based on labels, hashes or configuration alone. No model key reaches publication, generated code or check-broker environment. Raw model output is not published. Review and qualify the broker separately; it is not supplied by this PR.

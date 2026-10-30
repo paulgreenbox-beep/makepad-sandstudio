@@ -1,5 +1,7 @@
 # Makepad SandStudio (MSS)
 
+The disabled [GitHub Issue to Codex integration](doc/codex-issue-runner.md) is proposed for owner review. Its model-free checks do not qualify native runner isolation or live inference.
+
 Native multi-session GUI laboratory for Makepad applications and AI agents.
 
 **Status: architecture scaffold. No runtime or GUI parity is claimed.**
