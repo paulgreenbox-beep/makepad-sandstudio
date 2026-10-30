@@ -12,17 +12,24 @@ primitives and separate owner-controlled child/supervisor fixture images. It is 
 requests. It must not be used to route model-provided code or argv into native
 execution. See [the design, actual results and 15-category coverage matrix](../doc/native-check-broker.md).
 
-At tested source `0932ba368e7cdd5d21cee03609cd36b7a0fcb62f`, metadata, formatting,
+At tested source `d8decfd362c107f28fed552bc779ce2d4d2f4c9f`, metadata, formatting,
 all-target checking and default tests passed: 17 protocol tests and three real
 production-refusal tests. Feature all-target checking and 24 feature library
 tests passed (17 protocol plus seven real OS primitive tests). The native
 integration suite passed all ten active tests; the network/symlink cases remain
 `NOT_RUN` (two existing ignored prerequisites). Dispatcher compatibility tests
-passed 80 cases. See [current source-bound evidence](evidence/20261030-station-fix.json).
+passed 80 cases. All ten final check commands passed. See
+[current source-bound evidence](evidence/20261030-crash-user32.json).
+The earlier passing `0932ba368e7cdd5d21cee03609cd36b7a0fcb62f` results remain in
+[historical station-fix evidence](evidence/20261030-station-fix.json).
 The earlier station error 183 / secondary EOF result (one passed, eight failed,
 two ignored at `1a52fff0a894bdf19138ed1184c1d32b5ac94794`) remains preserved in
 [historical development evidence](evidence/20261030-development.json).
-Neither result qualifies production execution or full OS isolation.
+These results do not qualify production execution or full OS isolation. Two
+intermediate uncommitted full-suite runs failed descendant fixture cleanup,
+including one Windows error 5. These outcomes are recorded in development notes;
+retained fixtures were left untouched, without deletion retries. The final fix adds real retained-process termination waits;
+no cleanup assertion is weakened, and no exact failing-file cause is claimed.
 
 ## Implemented boundary
 
@@ -42,15 +49,34 @@ Neither result qualifies production execution or full OS isolation.
   child is separate from the supervisor and has no direct USER32/GDI32/WIN32U imports.
 - A unique owned private desktop in the unchanged current window station,
   not a separate noninteractive station. Owner/nonce DACL and low label are read
-  back; collisions are refused, `UOI_IO` is false and controlled close is proved
+  back and their creation SDDL hash pinned; collisions are refused, `UOI_IO` is false and controlled close is proved
   by failed reopen. No station/desktop switching API or user Default desktop is used.
-- Actual child startup `lpDesktop` and Win32k policy are checked. A NULL
-  `GetThreadDesktop` query is recorded as unavailable (`child_connected_desktop`
-  and `child_desktop_query_win32`), with actual USER32 association `NOT_VERIFIED`.
+- Actual child startup `lpDesktop` and Win32k policy are checked. The follow-up
+  validates actual READY PID/TID and token/Job facts, retains the primary thread,
+  and checks liveness/Win32k/parent context before and after an external query.
+  READY is limited to an eight-KiB first line and a five-second wait. The borrowed
+  post-READY `GetThreadDesktop` query occurs only in the disposable crash supervisor, never
+  a long-lived test parent. After READY it still returns NULL/error 0:
+  `MSS_USER32_QUERY status=QUERY_UNAVAILABLE win32=0 association_required_result=BLOCKED`.
+  Actual USER32 association remains `NOT_VERIFIED`; correct refusal is not
+  association PASS. No forced GUI connection or mitigation relaxation is used.
 - Owned Job limits, real child file denials, inherited-handle exclusion,
   environment filtering, descendants, timeout/cancellation, peer Job survival,
-  bounded output and controlled owned-tree/desktop cleanup. Supervisor-loss
-  tests prove verified-child termination, not crash-desktop disappearance.
+  bounded output and controlled owned-tree/desktop cleanup. Retained member
+  read/query-and-synchronize handles are verified against the exact Job, waited
+  together with the primary within a shared three-second deadline, then accounting
+  must be zero. The descendant test requires at least two signalled handles;
+  no enumerated PID becomes a kill target. Arbitrary new-spawn races remain unqualified.
+- Crash cleanup now proves the exact private desktop existed in the unchanged
+  current station, with pinned owner/DACL/label hash and `UOI_IO=false`, then
+  disappeared after supervisor/child death and explicit noninherited observer
+  witness release: `MSS_CRASH_DESKTOP before_exists=true after_absent=true`.
+  The child has a fixed twenty-second hold independent of EOF; kill begins below
+  ten seconds, supervisor/child waits are bounded to five seconds each, and child
+  death must precede its natural exit. After witness close, a three-second
+  `OpenDesktop` poll accepts only error 2 as absence. This is a bounded owned
+  fixture proof, not instantaneous destruction while observers hold handles or
+  complete production crash-recovery qualification.
 - A persistent create-new attempt-fence primitive. Its filesystem behavior does
   not authenticate the caller or qualify the future protected production journal.
 
