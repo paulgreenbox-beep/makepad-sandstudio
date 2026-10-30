@@ -309,7 +309,8 @@ mod windows_probe {
         .into_iter()
         .filter(|key| std::env::var_os(key).is_some())
         .collect();
-        json!({"kind":"facts", "token":token_facts(), "in_job":in_job != 0,
+        json!({"kind":"facts", "pid":std::process::id(), "thread_id":unsafe { GetCurrentThreadId() },
+            "token":token_facts(), "in_job":in_job != 0,
             "forbidden_env":forbidden_env, "startup_desktop":startup_desktop(),
             "win32k_disabled":win32k_disabled()})
     }

@@ -6,7 +6,7 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::{
     fs::{self, File, OpenOptions},
-    io::{BufRead, BufReader},
+    io::{BufRead, BufReader, Read},
     os::windows::io::AsRawHandle,
     path::{Path, PathBuf},
     process::{Command, Stdio},
@@ -14,9 +14,14 @@ use std::{
         Mutex,
         atomic::{AtomicBool, AtomicU64, Ordering},
     },
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
-use windows_sys::Win32::{Foundation::*, System::Threading::*};
+use windows_sys::Win32::{
+    Foundation::*,
+    Security::{Authorization::ConvertSecurityDescriptorToStringSecurityDescriptorW, *},
+    Storage::FileSystem::READ_CONTROL,
+    System::{StationsAndDesktops::*, Threading::*},
+};
 
 static SERIAL: Mutex<()> = Mutex::new(());
 static SEQUENCE: AtomicU64 = AtomicU64::new(0);
@@ -39,6 +44,124 @@ impl Drop for ProcessHandle {
             CloseHandle(self.0);
         }
     }
+}
+
+struct DesktopWitness(HDESK);
+impl DesktopWitness {
+    fn close_checked(mut self) {
+        assert_ne!(
+            unsafe { CloseDesktop(self.0) },
+            0,
+            "close only our desktop witness"
+        );
+        self.0 = std::ptr::null_mut();
+    }
+}
+impl Drop for DesktopWitness {
+    fn drop(&mut self) {
+        if !self.0.is_null() {
+            unsafe { CloseDesktop(self.0) };
+        }
+    }
+}
+
+fn user_object_name(object: HANDLE) -> String {
+    let mut bytes = 0;
+    unsafe { GetUserObjectInformationW(object, UOI_NAME, std::ptr::null_mut(), 0, &mut bytes) };
+    assert!(
+        bytes > 0 && bytes <= 65_536,
+        "bounded owned user-object name"
+    );
+    let mut name = vec![0u16; (bytes as usize).div_ceil(2)];
+    assert_ne!(
+        unsafe {
+            GetUserObjectInformationW(
+                object,
+                UOI_NAME,
+                name.as_mut_ptr().cast(),
+                bytes,
+                &mut bytes,
+            )
+        },
+        0,
+        "read owned user-object name"
+    );
+    let length = name
+        .iter()
+        .position(|c| *c == 0)
+        .expect("terminated owned object name");
+    String::from_utf16(&name[..length]).expect("owned object name UTF-16")
+}
+
+fn user_object_security_sha256(object: HANDLE) -> String {
+    let info = OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION | LABEL_SECURITY_INFORMATION;
+    let mut bytes = 0;
+    unsafe { GetUserObjectSecurity(object, &info, std::ptr::null_mut(), 0, &mut bytes) };
+    assert!(
+        bytes > 0 && bytes <= 65_536,
+        "bounded owned security descriptor"
+    );
+    let mut descriptor = vec![0usize; (bytes as usize).div_ceil(size_of::<usize>())];
+    assert_ne!(
+        unsafe {
+            GetUserObjectSecurity(
+                object,
+                &info,
+                descriptor.as_mut_ptr().cast(),
+                bytes,
+                &mut bytes,
+            )
+        },
+        0,
+        "read owned object owner, DACL and label"
+    );
+    let mut text = std::ptr::null_mut();
+    let mut length = 0;
+    assert_ne!(
+        unsafe {
+            ConvertSecurityDescriptorToStringSecurityDescriptorW(
+                descriptor.as_mut_ptr().cast(),
+                1,
+                info,
+                &mut text,
+                &mut length,
+            )
+        },
+        0,
+        "canonical owned security descriptor"
+    );
+    let units = unsafe { std::slice::from_raw_parts(text, length as usize) };
+    let value = String::from_utf16_lossy(
+        &units[..units.iter().position(|c| *c == 0).unwrap_or(units.len())],
+    );
+    unsafe { LocalFree(text.cast()) };
+    format!("{:x}", Sha256::digest(value.as_bytes()))
+}
+
+fn verify_desktop_witness(witness: &DesktopWitness, name: &str, security_sha256: &str) {
+    assert!(
+        user_object_name(witness.0) == name,
+        "desktop witness must have the exact owned name"
+    );
+    assert!(
+        user_object_security_sha256(witness.0) == security_sha256,
+        "desktop witness owner, DACL and label must match the owned snapshot"
+    );
+    let mut input = 0i32;
+    assert_ne!(
+        unsafe {
+            GetUserObjectInformationW(
+                witness.0,
+                UOI_IO,
+                (&mut input as *mut i32).cast(),
+                size_of_val(&input) as u32,
+                std::ptr::null_mut(),
+            )
+        },
+        0,
+        "query owned desktop input state"
+    );
+    assert_eq!(input, 0, "owned desktop must never receive user input");
 }
 
 struct Fixture {
@@ -123,8 +246,13 @@ impl Drop for Fixture {
                 .file_type()
                 .is_symlink()
         );
-        if fs::remove_dir_all(&self.root).is_err() && !std::thread::panicking() {
-            panic!("owned native fixture cleanup failed; retain evidence and investigate");
+        if let Err(error) = fs::remove_dir_all(&self.root) {
+            if !std::thread::panicking() {
+                panic!(
+                    "owned native fixture cleanup failed (win32={:?}); retain evidence and investigate",
+                    error.raw_os_error()
+                );
+            }
         }
     }
 }
@@ -348,6 +476,10 @@ fn descendant_outlives_primary_then_job_cleanup_is_verified() {
     let observation = fixture.run(&["spawn-child"]);
     assert_eq!(observation.end, End::DescendantsRemaining);
     assert!(observation.cleanup_confirmed);
+    assert!(
+        observation.process_handles_waited >= 2,
+        "both primary and the held-live descendant must have signalled retained handles"
+    );
     assert!(!observation.output_incomplete);
     let child = report(&observation);
     child_desktop_and_mitigation(&observation, &child);
@@ -453,6 +585,13 @@ fn supervisor_loss_closes_job_and_terminates_verified_child() {
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
     let fixture = Fixture::new();
+    let initial_station = unsafe { GetProcessWindowStation() };
+    assert!(
+        !initial_station.is_null(),
+        "observe only our current station"
+    );
+    let initial_station_name = user_object_name(initial_station);
+    let supervisor_started = Instant::now();
     let mut supervisor = OwnedSupervisor(
         Command::new(&fixture.supervisor)
             .arg("supervise-sleep")
@@ -467,7 +606,7 @@ fn supervisor_loss_closes_job_and_terminates_verified_child() {
     let (send, receive) = std::sync::mpsc::channel();
     let reader = std::thread::spawn(move || {
         let mut line = String::new();
-        let result = BufReader::new(stdout).read_line(&mut line);
+        let result = BufReader::new(stdout).take(8193).read_line(&mut line);
         let _ = send.send((result, line));
     });
     let (read, line) = receive
@@ -475,7 +614,17 @@ fn supervisor_loss_closes_job_and_terminates_verified_child() {
         .expect("bounded supervisor identity report");
     read.expect("read supervisor identity");
     reader.join().unwrap();
+    assert!(
+        line.len() <= 8192 && line.ends_with('\n'),
+        "supervisor metadata must be bounded and complete"
+    );
     let value: Value = serde_json::from_str(&line).expect("owned child identity report");
+    assert_eq!(value["kind"], "supervised-child");
+    assert_eq!(value["child_ready"], true);
+    assert_ne!(
+        value["thread_id"].as_u64().expect("owned ready thread ID"),
+        0
+    );
     let pid = value["pid"].as_u64().unwrap() as u32;
     let birth = value["birth"].as_u64().unwrap();
     let raw_handle = unsafe {
@@ -512,11 +661,104 @@ fn supervisor_loss_closes_job_and_terminates_verified_child() {
         fs::canonicalize(Path::new(&String::from_utf16_lossy(&image[..len as usize]))).unwrap(),
         fs::canonicalize(&fixture.image).unwrap()
     );
+    assert_eq!(
+        unsafe { WaitForSingleObject(handle.0, 0) },
+        WAIT_TIMEOUT,
+        "verified fixture child must still be alive before supervisor loss"
+    );
+
+    let snapshot = &value["desktop"];
+    let full_name = snapshot["full_name"]
+        .as_str()
+        .expect("owned full desktop name");
+    let (station_name, desktop_name) = full_name
+        .split_once('\\')
+        .expect("owned desktop must identify its station");
+    assert!(
+        station_name.eq_ignore_ascii_case(&initial_station_name),
+        "open the owned desktop only within our unchanged current station"
+    );
+    assert!(!desktop_name.eq_ignore_ascii_case("Default"));
+    assert!(
+        desktop_name
+            .strip_prefix("mss-probe-")
+            .is_some_and(|nonce| {
+                nonce.len() == 32 && nonce.bytes().all(|c| c.is_ascii_hexdigit())
+            }),
+        "accept only the exact private fixture desktop identity"
+    );
+    assert_eq!(snapshot["receives_input"], false);
+    let security_sha256 = snapshot["security_sha256"]
+        .as_str()
+        .expect("owned desktop security fingerprint");
+    assert!(security_sha256.len() == 64 && security_sha256.bytes().all(|c| c.is_ascii_hexdigit()));
+
+    let association = &value["child_desktop_observation"];
+    match association["status"]
+        .as_str()
+        .expect("typed running desktop query status")
+    {
+        "OBSERVED" => {
+            assert!(
+                association["full_name"].as_str() == Some(full_name),
+                "actual running desktop must match the owned desktop"
+            );
+            assert!(
+                association["security_sha256"].as_str() == Some(security_sha256),
+                "actual running desktop must match the owned security fingerprint"
+            );
+            assert_eq!(association["receives_input"], false);
+            assert_eq!(value["association_required_result"], "PASS");
+            println!(
+                "MSS_USER32_QUERY status=OBSERVED win32=none association_required_result=PASS"
+            );
+        }
+        "QUERY_UNAVAILABLE" => {
+            let win32 = association["win32"]
+                .as_u64()
+                .expect("raw USER32 query error");
+            assert_eq!(value["association_required_result"], "BLOCKED");
+            // This verifies refusal, and never establishes GUI association.
+            println!(
+                "MSS_USER32_QUERY status=QUERY_UNAVAILABLE win32={win32} association_required_result=BLOCKED"
+            );
+        }
+        _ => panic!("unsupported running desktop query status"),
+    }
+
+    assert!(
+        unsafe { GetProcessWindowStation() } == initial_station,
+        "observer station must remain unchanged"
+    );
+    let desktop_wide: Vec<u16> = desktop_name.encode_utf16().chain(Some(0)).collect();
+    let access = READ_CONTROL | DESKTOP_READOBJECTS | DESKTOP_WRITEOBJECTS;
+    let witness_raw = unsafe { OpenDesktopW(desktop_wide.as_ptr(), 0, 0, access) };
+    let witness_error = unsafe { GetLastError() };
+    assert!(
+        !witness_raw.is_null(),
+        "owned desktop must exist before supervisor loss: win32={witness_error}"
+    );
+    let witness = DesktopWitness(witness_raw);
+    verify_desktop_witness(&witness, desktop_name, security_sha256);
+    assert_eq!(
+        unsafe { WaitForSingleObject(handle.0, 0) },
+        WAIT_TIMEOUT,
+        "verified fixture child must remain alive immediately before supervisor loss"
+    );
+    assert!(
+        supervisor_started.elapsed() < Duration::from_secs(10),
+        "crash proof must precede the child's fixed twenty-second natural exit"
+    );
     // std::process::Child owns the supervisor process handle; never kill by name/PID.
     supervisor
         .0
         .kill()
         .expect("terminate own supervisor via retained handle");
+    assert_eq!(
+        unsafe { WaitForSingleObject(supervisor.0.as_raw_handle().cast(), 5000) },
+        WAIT_OBJECT_0,
+        "own supervisor must terminate within the crash proof bound"
+    );
     supervisor.0.wait().unwrap();
     let waited = unsafe { WaitForSingleObject(handle.0, 5000) };
     if waited != WAIT_OBJECT_0 {
@@ -530,6 +772,44 @@ fn supervisor_loss_closes_job_and_terminates_verified_child() {
         waited, WAIT_OBJECT_0,
         "owned child survived supervisor loss"
     );
+    assert!(
+        supervisor_started.elapsed() < Duration::from_secs(20),
+        "child death must precede its fixed twenty-second natural exit"
+    );
+    // Our witness intentionally keeps the same object alive until child death.
+    // Disappearance is tested only after explicitly releasing that last witness.
+    verify_desktop_witness(&witness, desktop_name, security_sha256);
+    witness.close_checked();
+    let cleanup_start = Instant::now();
+    loop {
+        assert!(
+            unsafe { GetProcessWindowStation() } == initial_station,
+            "observer station must remain unchanged throughout cleanup proof"
+        );
+        unsafe { SetLastError(ERROR_SUCCESS) };
+        let reopened = unsafe { OpenDesktopW(desktop_wide.as_ptr(), 0, 0, access) };
+        let error = unsafe { GetLastError() };
+        if reopened.is_null() {
+            assert_eq!(
+                error, ERROR_FILE_NOT_FOUND,
+                "only object absence proves desktop cleanup; access denial is not absence"
+            );
+            break;
+        }
+        let transient = DesktopWitness(reopened);
+        verify_desktop_witness(&transient, desktop_name, security_sha256);
+        transient.close_checked();
+        assert!(
+            cleanup_start.elapsed() < Duration::from_secs(3),
+            "owned desktop remains after supervisor and child death"
+        );
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    assert!(
+        unsafe { GetProcessWindowStation() } == initial_station,
+        "observer station must remain unchanged after cleanup proof"
+    );
+    println!("MSS_CRASH_DESKTOP before_exists=true after_absent=true");
 }
 
 #[test]

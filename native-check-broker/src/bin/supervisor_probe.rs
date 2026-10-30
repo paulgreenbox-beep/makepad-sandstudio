@@ -50,15 +50,52 @@ mod supervisor_probe {
         );
         let image = PinnedImage::open(&executable, &hash).expect("pin own compiled child fixture");
         let child_args = if child_mode == "sleep" {
-            vec!["sleep".to_owned(), "20000".to_owned()]
+            // Emit actual child facts before holding the process alive for the
+            // crash test. Supervisor EOF does not release this fixed hold.
+            vec!["child-marker".to_owned()]
         } else {
             vec![child_mode.to_owned()]
         };
         let run = Run::launch(image, &child_args, &root).expect("launch own restricted probe");
         if child_mode == "sleep" {
+            let line = run
+                .first_stdout_line(Duration::from_secs(5))
+                .expect("bounded running-child readiness report");
+            let facts: serde_json::Value =
+                serde_json::from_slice(&line).expect("typed running-child readiness report");
+            let desktop = run
+                .desktop_snapshot()
+                .expect("read exact owned desktop snapshot");
+            assert_eq!(facts["kind"], "facts");
+            assert_eq!(facts["pid"], run.pid);
+            assert_eq!(facts["thread_id"], run.thread_id);
+            assert_eq!(facts["in_job"], true);
+            assert_eq!(facts["token"]["restricted"], true);
+            assert_eq!(facts["token"]["low_integrity"], true);
+            assert_eq!(facts["token"]["elevated"], false);
+            assert_eq!(facts["token"]["enabled_admin"], false);
+            assert_eq!(facts["token"]["unexpected_enabled_privilege"], false);
+            assert_eq!(facts["forbidden_env"], json!([]));
+            assert_eq!(facts["win32k_disabled"], true);
+            assert_eq!(
+                facts["startup_desktop"].as_str(),
+                Some(desktop.full_name.as_str())
+            );
+            let child_desktop_observation = run
+                .observe_running_child_desktop()
+                .expect("query only the retained running child thread");
+            let association_required_result =
+                if child_desktop_observation.require_observed().is_ok() {
+                    "PASS"
+                } else {
+                    "BLOCKED"
+                };
             println!(
                 "{}",
-                json!({"kind":"supervised-child", "pid":run.pid, "birth":run.birth})
+                json!({"kind":"supervised-child", "pid":run.pid, "birth":run.birth,
+                    "thread_id":run.thread_id, "child_ready":true, "desktop":desktop,
+                    "child_desktop_observation":child_desktop_observation,
+                    "association_required_result":association_required_result})
             );
             io::stdout().flush().expect("flush own child identity");
         }

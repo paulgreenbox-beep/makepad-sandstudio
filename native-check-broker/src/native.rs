@@ -15,6 +15,7 @@ use std::{
     sync::{
         Mutex,
         atomic::{AtomicBool, Ordering},
+        mpsc::{self, Receiver, SyncSender},
     },
     thread,
     time::{Duration, Instant},
@@ -636,6 +637,7 @@ struct Desktop {
     parent_thread: u32,
     station: usize,
     station_security: Vec<usize>,
+    security_sha256: String,
 }
 // The creating helper exits before the handle is transferred. No thread is
 // switched to this desktop, and only this owner closes its handle.
@@ -662,7 +664,14 @@ impl Desktop {
             // CreateDesktop opens an existing object on collision. Refuse that
             // path before creation, then independently verify the nonce DACL to
             // catch a race; never reconfigure an existing object's security.
-            let existing = unsafe { OpenDesktopW(wide(&name).as_ptr(), 0, 0, READ_CONTROL) };
+            let existing = unsafe {
+                OpenDesktopW(
+                    wide(&name).as_ptr(),
+                    0,
+                    0,
+                    READ_CONTROL | DESKTOP_READOBJECTS | DESKTOP_WRITEOBJECTS,
+                )
+            };
             if !existing.is_null() {
                 unsafe {
                     CloseDesktop(existing);
@@ -708,6 +717,7 @@ impl Desktop {
             parent_thread: unsafe { GetCurrentThreadId() },
             station: station as usize,
             station_security,
+            security_sha256: format!("{:x}", Sha256::digest(expected.as_bytes())),
         };
         let security = object_security(result.desktop, info | LABEL_SECURITY_INFORMATION)?;
         let actual = security_text(
@@ -730,6 +740,16 @@ impl Desktop {
         Ok(result)
     }
     fn verify_parent(&self) -> Result<()> {
+        let info =
+            OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION | LABEL_SECURITY_INFORMATION;
+        let descriptor = object_security(self.desktop, info)?;
+        let text = security_text(descriptor.as_ptr().cast_mut().cast(), info)?;
+        if format!("{:x}", Sha256::digest(text.as_bytes())) != self.security_sha256 {
+            return Err(Error {
+                operation: "private-desktop-creation-security-changed",
+                win32: 0,
+            });
+        }
         if unsafe { GetProcessWindowStation() } as usize != self.station
             || unsafe { GetThreadDesktop(self.parent_thread) } as usize != self.parent_desktop
             || object_security(
@@ -751,7 +771,14 @@ impl Desktop {
             check(CloseDesktop(self.desktop), "close-own-private-desktop")?;
         }
         self.desktop = null_mut();
-        let reopened = unsafe { OpenDesktopW(wide(name).as_ptr(), 0, 0, READ_CONTROL) };
+        let reopened = unsafe {
+            OpenDesktopW(
+                wide(name).as_ptr(),
+                0,
+                0,
+                READ_CONTROL | DESKTOP_READOBJECTS | DESKTOP_WRITEOBJECTS,
+            )
+        };
         let error = unsafe { GetLastError() };
         if !reopened.is_null() {
             unsafe {
@@ -857,12 +884,16 @@ fn pipe() -> Result<(Handle, Handle)> {
     }
     Ok((read, write))
 }
-fn capture(handle: Handle) -> thread::JoinHandle<(Vec<u8>, bool)> {
+fn capture(
+    handle: Handle,
+    first_line: Option<SyncSender<Result<Vec<u8>>>>,
+) -> thread::JoinHandle<(Vec<u8>, bool)> {
     thread::spawn(move || {
         let mut file = unsafe { File::from_raw_handle(handle.0.cast()) };
         std::mem::forget(handle);
         let mut bytes = Vec::new();
         let mut incomplete = false;
+        let mut first_line = first_line;
         let mut buf = [0u8; 4096];
         loop {
             match file.read(&mut buf) {
@@ -871,6 +902,24 @@ fn capture(handle: Handle) -> thread::JoinHandle<(Vec<u8>, bool)> {
                     let keep = n.min(65536usize.saturating_sub(bytes.len()));
                     bytes.extend_from_slice(&buf[..keep]);
                     incomplete |= keep != n;
+                    if first_line.is_some() {
+                        if let Some(end) = bytes.iter().position(|byte| *byte == b'\n') {
+                            let line = if end < 8192 {
+                                Ok(bytes[..=end].to_vec())
+                            } else {
+                                Err(Error {
+                                    operation: "probe-ready-line-too-large",
+                                    win32: 0,
+                                })
+                            };
+                            let _ = first_line.take().unwrap().try_send(line);
+                        } else if bytes.len() >= 8192 {
+                            let _ = first_line.take().unwrap().try_send(Err(Error {
+                                operation: "probe-ready-line-too-large",
+                                win32: 0,
+                            }));
+                        }
+                    }
                 }
                 Err(_) => {
                     incomplete = true;
@@ -908,6 +957,44 @@ pub enum End {
     Cancelled,
     DescendantsRemaining,
 }
+#[derive(Debug, serde::Serialize)]
+pub struct DesktopSnapshot {
+    pub full_name: String,
+    /// Canonical OS owner/DACL/label SDDL, UTF-8 without NUL, SHA256.
+    pub security_sha256: String,
+    pub receives_input: bool,
+}
+#[derive(Debug, serde::Serialize)]
+#[serde(tag = "status")]
+pub enum ChildDesktopObservation {
+    #[serde(rename = "OBSERVED")]
+    Observed {
+        full_name: String,
+        security_sha256: String,
+        receives_input: bool,
+    },
+    #[serde(rename = "QUERY_UNAVAILABLE")]
+    QueryUnavailable { win32: u32 },
+}
+impl ChildDesktopObservation {
+    /// Startup intent, a NULL handle, or an acknowledgement never passes this gate.
+    pub fn require_observed(&self) -> Result<()> {
+        match self {
+            Self::Observed {
+                receives_input: false,
+                ..
+            } => Ok(()),
+            Self::Observed { .. } => Err(Error {
+                operation: "child-user32-desktop-receives-input",
+                win32: 0,
+            }),
+            Self::QueryUnavailable { win32 } => Err(Error {
+                operation: "child-user32-association-not-verified",
+                win32: *win32,
+            }),
+        }
+    }
+}
 #[derive(Debug)]
 pub struct Observation {
     pub end: End,
@@ -915,6 +1002,7 @@ pub struct Observation {
     pub stderr: Vec<u8>,
     pub output_incomplete: bool,
     pub cleanup_confirmed: bool,
+    pub process_handles_waited: usize,
     pub token: TokenFacts,
     pub pid: u32,
     pub birth: u64,
@@ -929,13 +1017,17 @@ pub struct Observation {
 }
 pub struct Run {
     job: Handle,
+    termination_attempted: bool,
     process: Handle,
+    primary_thread: Option<Handle>,
     _desktop: Desktop,
     _image: PinnedImage,
     stdout: Option<thread::JoinHandle<(Vec<u8>, bool)>>,
     stderr: Option<thread::JoinHandle<(Vec<u8>, bool)>>,
+    first_line: Receiver<Result<Vec<u8>>>,
     pub pid: u32,
     pub birth: u64,
+    pub thread_id: u32,
     token: TokenFacts,
     child_connected_desktop: Option<String>,
     child_desktop_query_win32: Option<u32>,
@@ -957,10 +1049,7 @@ fn active(job: HANDLE) -> Result<u32> {
     }
     Ok(info.ActiveProcesses)
 }
-fn has_descendants(job: HANDLE, primary: u32) -> Result<bool> {
-    // A signalled primary can remain in Job accounting briefly. Distinguish
-    // that case from a live descendant without granting a cleanup grace period
-    // to descendants or confusing primary exit with whole-tree termination.
+fn job_process_ids(job: HANDLE) -> Result<Vec<u32>> {
     let mut data = [0usize; 6]; // header + the enforced four-process maximum
     let list = data.as_mut_ptr().cast::<JOBOBJECT_BASIC_PROCESS_ID_LIST>();
     unsafe {
@@ -981,12 +1070,58 @@ fn has_descendants(job: HANDLE, primary: u32) -> Result<bool> {
                 win32: 0,
             });
         }
-        Ok(
-            std::slice::from_raw_parts((*list).ProcessIdList.as_ptr(), count)
-                .iter()
-                .any(|pid| *pid != primary as usize),
-        )
+        std::slice::from_raw_parts((*list).ProcessIdList.as_ptr(), count)
+            .iter()
+            .map(|pid| {
+                u32::try_from(*pid)
+                    .ok()
+                    .filter(|pid| *pid != 0)
+                    .ok_or(Error {
+                        operation: "job-process-id-invalid",
+                        win32: 0,
+                    })
+            })
+            .collect()
     }
+}
+fn has_descendants(job: HANDLE, primary: u32) -> Result<bool> {
+    // A signalled primary can remain briefly in accounting; its retained
+    // handle still owns the identity. Never confuse it with a descendant.
+    Ok(job_process_ids(job)?.iter().any(|pid| *pid != primary))
+}
+fn retain_job_members(job: HANDLE, primary: u32) -> Result<Vec<Handle>> {
+    let mut members = Vec::new();
+    for pid in job_process_ids(job)? {
+        if pid == primary {
+            continue;
+        } // already retained by Run
+        let process = Handle::new(
+            unsafe {
+                OpenProcess(
+                    PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZATION_SYNCHRONIZE,
+                    0,
+                    pid,
+                )
+            },
+            "retain-owned-job-member",
+        )?;
+        let mut inside = 0;
+        unsafe {
+            check(
+                IsProcessInJob(process.0, job, &mut inside),
+                "retained-member-job-identity",
+            )?;
+        }
+        if inside == 0 {
+            return Err(Error {
+                operation: "job-member-identity-uncertain",
+                win32: 0,
+            });
+        }
+        // This read/synchronize handle is never a PID-based mutation target.
+        members.push(process);
+    }
+    Ok(members)
 }
 fn create_job() -> Result<Handle> {
     let job = Handle::new(unsafe { CreateJobObjectW(null(), null()) }, "create-job")?;
@@ -1278,21 +1413,138 @@ impl Run {
         }
         drop(stdout_write);
         drop(stderr_write);
+        let (ready_send, first_line) = mpsc::sync_channel(1);
         Ok(Self {
             job,
+            termination_attempted: false,
             process: process_handle,
+            primary_thread: Some(thread_handle),
             _desktop: desktop,
             _image: image,
-            stdout: Some(capture(stdout_read)),
-            stderr: Some(capture(stderr_read)),
+            stdout: Some(capture(stdout_read, Some(ready_send))),
+            stderr: Some(capture(stderr_read, None)),
+            first_line,
             pid: process.dwProcessId,
+            thread_id: process.dwThreadId,
             birth: ((creation.dwHighDateTime as u64) << 32) | creation.dwLowDateTime as u64,
             token: facts,
             child_connected_desktop,
             child_desktop_query_win32,
         })
     }
+    /// One bounded report from a trusted probe, not an execution acknowledgement.
+    /// Full output capture and truncation/error gates remain independent.
+    pub fn first_stdout_line(&self, timeout: Duration) -> Result<Vec<u8>> {
+        if timeout.is_zero() || timeout > Duration::from_secs(5) {
+            return Err(Error {
+                operation: "probe-ready-timeout-range",
+                win32: 0,
+            });
+        }
+        self.first_line
+            .recv_timeout(timeout)
+            .map_err(|error| Error {
+                operation: match error {
+                    mpsc::RecvTimeoutError::Timeout => "probe-ready-timeout",
+                    mpsc::RecvTimeoutError::Disconnected => "probe-ready-missing",
+                },
+                win32: 0,
+            })?
+    }
+    pub fn desktop_snapshot(&self) -> Result<DesktopSnapshot> {
+        self._desktop.verify_parent()?;
+        let info =
+            OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION | LABEL_SECURITY_INFORMATION;
+        let descriptor = object_security(self._desktop.desktop, info)?;
+        let text = security_text(descriptor.as_ptr().cast_mut().cast(), info)?;
+        Ok(DesktopSnapshot {
+            full_name: String::from_utf16_lossy(
+                &self._desktop.name[..self._desktop.name.len() - 1],
+            ),
+            security_sha256: format!("{:x}", Sha256::digest(text.as_bytes())),
+            receives_input: desktop_input(self._desktop.desktop)?,
+        })
+    }
+    fn verify_live_primary(&self) -> Result<()> {
+        let primary_thread = self.primary_thread.as_ref().ok_or(Error {
+            operation: "primary-observation-phase-ended",
+            win32: 0,
+        })?;
+        if unsafe { WaitForSingleObject(self.process.0, 0) } != WAIT_TIMEOUT
+            || unsafe { WaitForSingleObject(primary_thread.0, 0) } != WAIT_TIMEOUT
+            || unsafe { GetProcessIdOfThread(primary_thread.0) } != self.pid
+            || unsafe { GetThreadId(primary_thread.0) } != self.thread_id
+        {
+            return Err(Error {
+                operation: "owned-primary-not-live-or-identity-changed",
+                win32: 0,
+            });
+        }
+        let mut policy = unsafe { zeroed::<PROCESS_MITIGATION_SYSTEM_CALL_DISABLE_POLICY>() };
+        unsafe {
+            check(
+                GetProcessMitigationPolicy(
+                    self.process.0,
+                    ProcessSystemCallDisablePolicy,
+                    (&mut policy as *mut PROCESS_MITIGATION_SYSTEM_CALL_DISABLE_POLICY).cast(),
+                    size_of_val(&policy),
+                ),
+                "running-child-mitigation",
+            )?;
+        }
+        if unsafe { policy.Anonymous.Flags } & 1 == 0 {
+            return Err(Error {
+                operation: "running-child-mitigation-missing",
+                win32: 0,
+            });
+        }
+        self._desktop.verify_parent()
+    }
+    /// Query only the retained owned primary thread after a validated READY.
+    /// The USER32 handle is borrowed and is never closed. Call in a disposable
+    /// trusted supervisor process so its implicit references cannot contaminate
+    /// subsequent desktop-disappearance observations in another process.
+    pub fn observe_running_child_desktop(&self) -> Result<ChildDesktopObservation> {
+        self.verify_live_primary()?;
+        unsafe {
+            SetLastError(ERROR_SUCCESS);
+        }
+        let actual = unsafe { GetThreadDesktop(self.thread_id) };
+        let observation = if actual.is_null() {
+            ChildDesktopObservation::QueryUnavailable {
+                win32: unsafe { GetLastError() },
+            }
+        } else {
+            let info =
+                OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION | LABEL_SECURITY_INFORMATION;
+            let descriptor = object_security(actual, info)?;
+            let text = security_text(descriptor.as_ptr().cast_mut().cast(), info)?;
+            let hash = format!("{:x}", Sha256::digest(text.as_bytes()));
+            let expected = self.desktop_snapshot()?;
+            if object_name(actual)? != object_name(self._desktop.desktop)?
+                || desktop_input(actual)?
+                || hash != expected.security_sha256
+            {
+                return Err(Error {
+                    operation: "running-child-desktop-mismatch-or-input",
+                    win32: 0,
+                });
+            }
+            ChildDesktopObservation::Observed {
+                full_name: expected.full_name,
+                security_sha256: hash,
+                receives_input: false,
+            }
+        };
+        // Death during observation makes the sample uncertain, never accepted.
+        self.verify_live_primary()?;
+        Ok(observation)
+    }
     pub fn wait(mut self, timeout: Duration, cancel: &AtomicBool) -> Result<Observation> {
+        // The consuming wait ends live-thread observation. Release that extra
+        // kernel reference before waiting for whole-Job/resource teardown.
+        // Retained process and Job handles still own all lifetime operations.
+        drop(self.primary_thread.take());
         let start = Instant::now();
         let end;
         loop {
@@ -1321,7 +1573,13 @@ impl Run {
                 return Err(fail("wait-child"));
             }
         }
+        // Termination acknowledgement/accounting alone do not prove kernel
+        // teardown. Retain real owned members before asynchronous termination.
+        let members = retain_job_members(self.job.0, self.pid)?;
+        let cleanup_start = Instant::now();
         if !matches!(end, End::Exited(_)) {
+            // Fence even an uncertain API result; Drop must not replay it.
+            self.termination_attempted = true;
             unsafe {
                 check(
                     TerminateJobObject(self.job.0, 0x4d5353),
@@ -1329,7 +1587,22 @@ impl Run {
                 )?;
             }
         }
-        let cleanup_start = Instant::now();
+        for process in members.iter().chain(std::iter::once(&self.process)) {
+            let remaining = Duration::from_secs(3).saturating_sub(cleanup_start.elapsed());
+            let waited = unsafe { WaitForSingleObject(process.0, remaining.as_millis() as u32) };
+            if waited != WAIT_OBJECT_0 {
+                return Err(Error {
+                    operation: "owned-process-termination-unconfirmed",
+                    win32: if waited == WAIT_FAILED {
+                        unsafe { GetLastError() }
+                    } else {
+                        waited
+                    },
+                });
+            }
+        }
+        let process_handles_waited = members.len() + 1;
+        drop(members);
         while active(self.job.0)? > 0 && cleanup_start.elapsed() < Duration::from_secs(3) {
             thread::sleep(Duration::from_millis(10));
         }
@@ -1358,6 +1631,7 @@ impl Run {
             stderr,
             output_incomplete: a || b,
             cleanup_confirmed,
+            process_handles_waited,
             token: TokenFacts {
                 restricted: self.token.restricted,
                 elevated: self.token.elevated,
@@ -1379,9 +1653,14 @@ impl Run {
 }
 impl Drop for Run {
     fn drop(&mut self) {
-        unsafe {
-            TerminateJobObject(self.job.0, 0x4d5353);
+        if !self.termination_attempted {
+            self.termination_attempted = true;
+            unsafe {
+                TerminateJobObject(self.job.0, 0x4d5353);
+            }
         }
+        // Closing the owned, non-inherited Job still enforces KILL_ON_JOB_CLOSE;
+        // Drop never claims observed teardown or retries a termination request.
     }
 }
 
