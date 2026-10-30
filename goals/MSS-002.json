@@ -1,0 +1,33 @@
+{
+  "schema": "mss-goal-v1",
+  "id": "MSS-002",
+  "title": "Implement and verify typed Core session registry",
+  "module_ids": [
+    "mss.core"
+  ],
+  "status": "IN_REVIEW",
+  "branch": "codex/mss-core-session-registry",
+  "pr_url": "https://github.com/paulgreenbox-beep/makepad-sandstudio/pull/1",
+  "owner_agent": null,
+  "source_commit": "75e39070f0ac12ac314bff5e627da56675c55f99",
+  "dependencies": [],
+  "acceptance": [
+    "Exact owner checks",
+    "Monotonic IDs and generation-aware handles",
+    "Independent session create, select and close",
+    "No implication of OS process lifecycle"
+  ],
+  "required_checks": [
+    {
+      "id": "RUST_FMT",
+      "status": "NOT_RUN",
+      "evidence_ref": null
+    },
+    {
+      "id": "CORE_TEST",
+      "status": "NOT_RUN",
+      "evidence_ref": null
+    }
+  ],
+  "notes": "Code proposed in draft PR; test execution not verified."
+}
