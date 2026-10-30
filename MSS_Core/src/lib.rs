@@ -46,6 +46,15 @@ pub enum SessionState {
     Closed,
 }
 
+/// Exact session identity including incarnation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct SessionHandle {
+    /// Owner-scoped logical ID.
+    pub id: SessionId,
+    /// Identity generation.
+    pub generation: SessionGeneration,
+}
+
 /// An immutable description of the currently tracked logical session.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Session {
@@ -59,6 +68,8 @@ pub struct Session {
 impl Session {
     /// The logical identity of this session.
     pub fn id(&self) -> SessionId { self.id }
+    /// An exact handle to validate against stale callers.
+    pub fn handle(&self) -> SessionHandle { SessionHandle { id: self.id, generation: self.generation } }
     /// The current identity generation.
     pub fn generation(&self) -> SessionGeneration { self.generation }
     /// Its exact owner agent.
@@ -84,6 +95,8 @@ pub enum RegistryError {
     ClosedSession,
     /// Session title is empty or oversized.
     InvalidTitle,
+    /// Session generation is no longer current.
+    StaleGeneration,
 }
 
 impl fmt::Display for RegistryError {
@@ -95,6 +108,7 @@ impl fmt::Display for RegistryError {
             Self::ForeignSession => "foreign session owner",
             Self::ClosedSession => "session is closed",
             Self::InvalidTitle => "invalid session title",
+            Self::StaleGeneration => "stale session generation",
         })
     }
 }
@@ -157,6 +171,20 @@ impl SessionRegistry {
         self.sessions.get(&id).ok_or(RegistryError::UnknownSession)
     }
 
+    /// Checks the exact ID + generation before returning the session.
+    pub fn get_by_handle(&self, handle: SessionHandle) -> Result<&Session, RegistryError> {
+        let session = self.get_session(handle.id)?;
+        if session.generation != handle.generation { return Err(RegistryError::StaleGeneration); }
+        Ok(session)
+    }
+
+    /// Checks the caller agent before exposing session details.
+    pub fn get_owned_session(&self, handle: SessionHandle, agent: AgentId) -> Result<&Session, RegistryError> {
+        let session = self.get_by_handle(handle)?;
+        if session.agent != agent { return Err(RegistryError::ForeignSession); }
+        Ok(session)
+    }
+
     /// Iterates live sessions in stable ID order.
     pub fn list_sessions(&self) -> impl ExactSizeIterator<Item = &Session> {
         self.sessions.values()
@@ -174,6 +202,13 @@ impl SessionRegistry {
         Ok(())
     }
 
+    /// Selects only a session belonging to the requesting agent.
+    pub fn select_owned_session(&mut self, handle: SessionHandle, agent: AgentId) -> Result<(), RegistryError> {
+        self.get_owned_session(handle, agent)?;
+        self.selected = Some(handle.id);
+        Ok(())
+    }
+
     /// Closes only a session owned by the specified agent, then removes it.
     /// This is logical removal, not a process termination or cleanup proof.
     pub fn close_session(&mut self, id: SessionId, agent: AgentId) -> Result<Session, RegistryError> {
@@ -183,6 +218,12 @@ impl SessionRegistry {
         removed.state = SessionState::Closed;
         if self.selected == Some(id) { self.selected = None; }
         Ok(removed)
+    }
+
+    /// Closes via an exact generation-aware owned handle.
+    pub fn close_owned_session(&mut self, handle: SessionHandle, agent: AgentId) -> Result<Session, RegistryError> {
+        self.get_owned_session(handle, agent)?;
+        self.close_session(handle.id, agent)
     }
 
     fn allocate(next: &mut Option<NonZeroU64>) -> Result<NonZeroU64, RegistryError> {
@@ -258,6 +299,21 @@ mod tests {
         assert_eq!(r.create_session(a, "x".repeat(257)), Err(RegistryError::InvalidTitle));
         let x = r.create_session(a, "Valid").unwrap();
         assert_eq!(x.get(), 1);
+    }
+
+    #[test]
+    fn exact_handle_refuses_stale_generation_and_foreign_agent() {
+        let mut r = SessionRegistry::new();
+        let agent = r.register_agent().unwrap();
+        let foreign = r.register_agent().unwrap();
+        let id = r.create_session(agent, "One").unwrap();
+        let handle = r.get_session(id).unwrap().handle();
+        assert_eq!(r.get_owned_session(handle, foreign), Err(RegistryError::ForeignSession));
+        let forged = SessionHandle { id, generation: SessionGeneration(NonZeroU64::new(2).unwrap()) };
+        assert_eq!(r.get_by_handle(forged), Err(RegistryError::StaleGeneration));
+        assert_eq!(r.select_owned_session(forged, agent), Err(RegistryError::StaleGeneration));
+        assert_eq!(r.close_owned_session(forged, agent), Err(RegistryError::StaleGeneration));
+        assert_eq!(r.close_owned_session(handle, agent).unwrap().state(), SessionState::Closed);
     }
 
     #[test]
