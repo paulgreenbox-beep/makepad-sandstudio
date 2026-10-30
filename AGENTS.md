@@ -12,3 +12,7 @@ Read README.md, SECURITY.md, doc/architecture.md, doc/compatibility.md, and doc/
 - Mutations must be bounded, authorized and cancellation-aware. Forced containment is not a normal exit.
 - Avoid accidental global key/mouse input; never block human work.
 - Prefer small, reviewable commits with actual checks and recorded scope. Do not describe mock layers as production-ready.
+
+## Dungeon structural declarations
+
+Read [doc/dungeon.md](doc/dungeon.md) before modifying SKLT. Keep stable `object_id` values and explicit dependencies. SKLT is not executable proof; do not conflate architectural `BOUNDED` with OS sandbox security. GLIF/GLYF integration remains out of scope for now.
