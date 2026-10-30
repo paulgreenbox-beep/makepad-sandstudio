@@ -11,7 +11,8 @@ pub struct CommandSequence(pub u64);
 /// or capability. No WidgetId mapping or approved producer is installed yet.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WidgetTarget {
-    /// Nonempty semantic address, at most 256 UTF-8 bytes without controls.
+    /// Nonempty exact address, at most 256 UTF-8 bytes without controls.
+    /// Leading/trailing Unicode whitespace is refused, never silently trimmed.
     pub automation_id: String,
 }
 
@@ -338,6 +339,7 @@ mod tests {
             )))
         );
     }
+
     #[test]
     fn rejects_noncanonical_padded_widget_addresses_without_dispatch() {
         let mut registry = SessionRegistry::new();
@@ -349,7 +351,12 @@ mod tests {
         };
         let api = Api::new(&registry);
         let mut gate = RemoteGate::new();
-        for id in [" input.name", "input.name ", "\\u{00a0}input.name", "input.name\\u{2003}"] {
+        for id in [
+            " input.name",
+            "input.name ",
+            "\u{00a0}input.name",
+            "input.name\u{2003}",
+        ] {
             let intent = RemoteCommand::Read(WidgetTarget {
                 automation_id: id.to_owned(),
             });
@@ -370,5 +377,4 @@ mod tests {
             Err(RemoteError::NotDispatched)
         );
     }
-
 }
