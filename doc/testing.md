@@ -81,6 +81,26 @@ test names and local-log digests are recorded in
 This is source-level Rust verification, not a production broker receipt or
 managed Dungeon/GOAL `VERIFIED` assignment.
 
+Observed at exact source `352e2c317de74c67e61fa38371a99be54c606c10`:
+all eight required commands below returned exit code 0. The workspace test run
+passed **44 tests, 0 failed, 0 ignored**: Core16, API6, Remote5, Render9 and
+public composition8. The cheapest four-package run passed the same 44 cases;
+it is not an additional 44 distinct tests. SDK/MCP/Desktop have zero behavioral
+tests. Final runs used Rust/Cargo 1.97.1, locked/offline dependencies and two
+build jobs; release compilation also passed. Later commits contain only
+documentation/development evidence, with identical Rust/manifests/lock/fixtures.
+
+The initial complete metadata attempt could not resolve two uncached, already
+locked cross-platform crates offline; filling only those cache entries with
+`--locked` resolved it without an upgrade. A local log collector then failed
+on an empty successful format log; its correction changed no Rust source and
+all final gates ran afterward. Both observations remain in the record. The
+upstream duplicate-package Cargo warnings are retained in local logs.
+
+All eight Mermaid blocks were manually reviewed for syntax and source/planned
+scope. Parser/render verification is `NOT_RUN`: no installed parser was found,
+and no new tool was installed for it.
+
 `CHEAPEST_VERIFICATION_PATH`: locked/offline tests for mss-core, mss-api,
 mss-remote and mss-render including the public composition tests; then the full
 explicit milestone gates below. Heavy Cargo commands run serially with two

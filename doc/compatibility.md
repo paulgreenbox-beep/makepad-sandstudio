@@ -66,6 +66,11 @@ The following files were read at the refreshed exact Toolkit SHA, rather than tr
 
 `IMPLEMENTED` means the narrow MSS source mechanism exists. `TESTED` is reserved for an exact-source executed check recorded in [testing.md](testing.md); no TESTED claim is inferred here from a test function. `NOT_IMPLEMENTED` means the MSS mechanism is absent. `NOT_VERIFIED` means the broader behavior/parity has no accepted proof. All Toolkit execution/parity checks for this integration remain NOT_RUN/NOT_VERIFIED.
 
+The logical subset is now `TESTED` at MSS source
+`352e2c317de74c67e61fa38371a99be54c606c10`: 44 Rust tests and all eight
+workspace/release commands passed. This includes command refusal and synthetic
+PNG admission, and establishes none of the end-to-end gaps in the table.
+
 | Toolkit surface | Current narrow MSS coverage | End-to-end gap and status |
 |---|---|---|
 | Semantic UI/tree | Session/agent authorization is IMPLEMENTED logical policy, not a semantic tree. | App semantic producer, inspect/read adapter and widget states NOT_IMPLEMENTED; parity NOT_VERIFIED. |

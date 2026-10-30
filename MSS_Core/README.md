@@ -50,12 +50,13 @@ selection; closing the selected session clears it.
 
 The cheapest package check is `cargo test -p mss-core --lib --locked --offline`.
 Run the workspace metadata/check/test gates separately and retain their actual
-results. The reviewed Makepad dependency and lockfile remain unchanged; Core
-itself uses only the Rust standard library.
+results. The reviewed external dependency resolutions and Makepad pin remain
+unchanged; the integrated lockfile adds only MSS dependency edges. Core itself
+uses only the Rust standard library.
 
 At source `3ca93bbc94823651b0974d09e85cee1f37196251`, all twelve Core tests and
-the locked/offline workspace checks passed. The other workspace members in
-this tree have no tests; this is not a result for their separate implementation PRs.
+the locked/offline workspace checks passed. Other members in that historical
+Core tree had no tests; that record does not cover the later integration.
 
 See the [source-bound development record](../doc/cronica/20261030-core-pr1.json)
 and [test scope](../doc/testing.md). Test execution verifies the declared logical
