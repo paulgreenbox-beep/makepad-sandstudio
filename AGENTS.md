@@ -16,3 +16,7 @@ Read README.md, SECURITY.md, doc/architecture.md, doc/compatibility.md, and doc/
 ## Dungeon structural declarations
 
 Read [doc/dungeon.md](doc/dungeon.md) before modifying SKLT. Keep stable `object_id` values and explicit dependencies. SKLT is not executable proof; do not conflate architectural `BOUNDED` with OS sandbox security. GLIF/GLYF integration remains out of scope for now.
+
+## GitHub agent goal workflow
+
+Before work, read [goals/README.md](goals/README.md) and [goals/manifest.json](goals/manifest.json). Declare a goal before changing code, update status through a reviewable PR, and attach source-bound check receipts. Agents must not self-assign VERIFIED or invent execution proof. For pending work record NOT_RUN; see [doc/agent-goal-workflow.md](doc/agent-goal-workflow.md).

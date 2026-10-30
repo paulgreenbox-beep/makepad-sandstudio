@@ -1,0 +1,73 @@
+{
+  "schema": "mss-check-catalog-v1",
+  "checks": [
+    {
+      "id": "RUST_FMT",
+      "description": "Rust formatting",
+      "command": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "requires": [
+        "exit_code",
+        "commit_sha"
+      ]
+    },
+    {
+      "id": "CORE_TEST",
+      "description": "MSS Core unit tests",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "mss-core"
+      ],
+      "requires": [
+        "exit_code",
+        "test_summary",
+        "commit_sha"
+      ]
+    },
+    {
+      "id": "WORKSPACE_CHECK",
+      "description": "Full workspace type check",
+      "command": [
+        "cargo",
+        "check",
+        "--workspace",
+        "--all-targets"
+      ],
+      "requires": [
+        "exit_code",
+        "commit_sha"
+      ]
+    },
+    {
+      "id": "WINDOWS_DESKTOP",
+      "description": "Real native Makepad desktop build/run",
+      "command": null,
+      "requires": [
+        "windows_host_identity",
+        "executable_sha256",
+        "native_launch",
+        "shutdown",
+        "commit_sha"
+      ]
+    },
+    {
+      "id": "TOOLKIT_PARITY",
+      "description": "Full exact Toolkit operation/acceptance equivalence",
+      "command": null,
+      "requires": [
+        "toolkit_commit",
+        "operation_inventory",
+        "scenario_results",
+        "evidence_refs",
+        "commit_sha"
+      ]
+    }
+  ]
+}

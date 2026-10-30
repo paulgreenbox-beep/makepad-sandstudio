@@ -1,0 +1,17 @@
+{
+  "schema": "mss-goal-index-v1",
+  "goals": [
+    {
+      "id": "MSS-001",
+      "path": "goals/MSS-001.json"
+    },
+    {
+      "id": "MSS-002",
+      "path": "goals/MSS-002.json"
+    },
+    {
+      "id": "MSS-003",
+      "path": "goals/MSS-003.json"
+    }
+  ]
+}
