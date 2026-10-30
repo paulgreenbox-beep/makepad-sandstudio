@@ -324,7 +324,7 @@ test('publication contract requests Draft PRs and contains no automatic merge or
   assert.doesNotMatch(controller, /force:\s*true/);
 });
 
-test('actual collect stage records failed Codex as BLOCKED without checks, bundle, model or network', t => {
+test('actual collect stage records failed Codex as BLOCKED without checks, bundle, model or network', async t => {
   const temporaryRoot = realpathSync(tmpdir());
   const fixtureRoot = mkdtempSync(path.join(temporaryRoot, 'mss-dispatch-failure-test-'));
   t.after(() => {
@@ -367,9 +367,11 @@ test('actual collect stage records failed Codex as BLOCKED without checks, bundl
   mkdirSync(outputRoot);
   writeFileSync(path.join(outputRoot, 'plan.json'), JSON.stringify({ schema: 'mss-dispatch-plan-v1', goal: GOAL, issue: 9, run: ATTEMPT, base, progress, branch: BRANCH, claim: '4'.repeat(40), issue_hash: digest('MSS-GOAL: MSS-009'), policy_hash: digest(JSON.stringify(policy)), scope: policy.scopes[GOAL], checks: f.catalog.checks }));
   writeFileSync(preloader, `import fs from 'node:fs';\nimport childProcess from 'node:child_process';\nimport { syncBuiltinESMExports } from 'node:module';\nconst original = childProcess.spawnSync;\nchildProcess.spawnSync = (file, args, options) => {\n  fs.appendFileSync(process.env.MSS_TEST_COMMAND_LOG, JSON.stringify({file,args})+'\\n');\n  if (file !== 'git') throw new Error('Non-Git subprocess is forbidden in failed-collect test');\n  return original(file,args,options);\n};\nsyncBuiltinESMExports();\nglobalThis.fetch = () => { fs.writeFileSync(process.env.MSS_TEST_NETWORK_MARKER,'attempted'); throw new Error('Network is forbidden in offline test'); };\n`);
-  const result = spawnSync(process.execPath, ['--import', pathToFileURL(preloader).href, path.join(trustedRoot, 'scripts/codex-issue/run.mjs'), 'collect'], {
+  const collectArgs = ['--import', pathToFileURL(preloader).href, path.join(trustedRoot, 'scripts/codex-issue/run.mjs'), 'collect'];
+  const collectEnvironment = { ...environment, GITHUB_RUN_ID: ATTEMPT, GITHUB_RUN_ATTEMPT: '1', GITHUB_SHA: base, MSS_OUT: outputRoot, MSS_WORK: path.join(fixtureRoot, 'absent-agent-worktree'), MSS_CODEX_OUTCOME: 'failure', MSS_TEST_COMMAND_LOG: commandLog, MSS_TEST_NETWORK_MARKER: networkMarker };
+  const result = spawnSync(process.execPath, collectArgs, {
     cwd: trustedRoot, shell: false, encoding: 'utf8', timeout: 10000,
-    env: { ...environment, GITHUB_RUN_ID: ATTEMPT, GITHUB_SHA: base, MSS_OUT: outputRoot, MSS_WORK: path.join(fixtureRoot, 'absent-agent-worktree'), MSS_CODEX_OUTCOME: 'failure', MSS_TEST_COMMAND_LOG: commandLog, MSS_TEST_NETWORK_MARKER: networkMarker },
+    env: collectEnvironment,
   });
   assert.equal(result.status, 0, `Collect could not record the failure: ${result.stderr}`);
   const recorded = JSON.parse(readFileSync(path.join(outputRoot, 'result.json'), 'utf8'));
@@ -381,4 +383,18 @@ test('actual collect stage records failed Codex as BLOCKED without checks, bundl
   assert.equal(commands.length, 1);
   assert.equal(commands[0].file, 'git');
   assert.deepEqual(commands[0].args.slice(-2), ['rev-parse', 'HEAD']);
+  await t.test('rerun failed jobs with the same plan/run is denied before any work', () => {
+    const outputBefore = readFileSync(path.join(outputRoot, 'result.json'), 'utf8');
+    const commandsBefore = readFileSync(commandLog, 'utf8');
+    const rerun = spawnSync(process.execPath, collectArgs, {
+      cwd: trustedRoot, shell: false, encoding: 'utf8', timeout: 10000,
+      env: { ...collectEnvironment, GITHUB_RUN_ATTEMPT: '2', MSS_CODEX_OUTCOME: 'success' },
+    });
+    assert.equal(rerun.status, 1);
+    assert.match(rerun.stderr, /BLOCKED \(REPLAY_DENIED\)/);
+    assert.equal(readFileSync(path.join(outputRoot, 'result.json'), 'utf8'), outputBefore, 'Rerun must not overwrite the original outcome');
+    assert.equal(readFileSync(commandLog, 'utf8'), commandsBefore, 'Rerun must stop before Git, broker or model subprocesses');
+    assert.equal(existsSync(networkMarker), false);
+    assert.deepEqual(readdirSync(outputRoot).sort(), ['plan.json', 'result.json']);
+  });
 });

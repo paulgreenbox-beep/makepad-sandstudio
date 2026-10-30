@@ -8,7 +8,11 @@ import { REPOSITORY, Blocked, authorize, goalId, validateGoal, ready, validatePa
 const trusted = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const out = path.resolve(process.env.MSS_OUT ?? path.join(trusted, '.mss-dispatch'));
 const work = path.resolve(process.env.MSS_WORK ?? path.join(trusted, '..', 'work'));
-const read = p => JSON.parse(fs.readFileSync(p, 'utf8'));
+const read = p => {
+  const stat=fs.lstatSync(p);
+  if (!stat.isFile() || stat.isSymbolicLink() || stat.size>1048576) throw new Blocked('INVALID_OR_OVERSIZED_JSON');
+  return JSON.parse(fs.readFileSync(p, 'utf8'));
+};
 const local = p => read(path.join(trusted, p));
 const policy = local('.github/codex-issue-policy.json');
 const runId = process.env.GITHUB_RUN_ID;
@@ -42,7 +46,10 @@ async function metadataCommit(parent, changes, message) {
   demand(sha(parent), 'INVALID_PARENT');
   const commit = await api(`git/commits/${parent}`);
   const tree = await api('git/trees', 'POST', { base_tree: commit.tree.sha, tree: changes.map(x => ({ path: x.path, mode: '100644', type: 'blob', content: JSON.stringify(x.value, null, 2) + '\n' })) });
-  return api('git/commits', 'POST', { message, tree: tree.sha, parents: [parent] });
+  demand(sha(tree.sha),'OUTCOME_UNKNOWN_NO_AUTOMATIC_RETRY');
+  const next=await api('git/commits', 'POST', { message, tree: tree.sha, parents: [parent] });
+  demand(sha(next.sha),'OUTCOME_UNKNOWN_NO_AUTOMATIC_RETRY');
+  return next;
 }
 async function advance(branch, expected, next) {
   demand(/^codex\/issue-[1-9]\d*$/.test(branch), 'INVALID_BRANCH');
@@ -96,6 +103,7 @@ async function prepare() {
     demand(!(await api(`git/ref/heads/${branch}`,'GET',undefined,process.env.GH_TOKEN,true)) && !(await api(`git/ref/heads/codex/claims/${id}`,'GET',undefined,process.env.GH_TOKEN,true)),'EXISTING_CLAIM_OR_BRANCH');
     const baseCommit = await api(`git/commits/${base}`);
     const claim = await api('git/commits', 'POST', { message: `MSS claim ${id} issue ${issue.number} run ${runId} body ${digest(issue.body)}`, tree: baseCommit.tree.sha, parents: [base] });
+    demand(sha(claim.sha),'OUTCOME_UNKNOWN_NO_AUTOMATIC_RETRY');
     // Atomic create-only GOAL claim also fences two different Issues for one GOAL.
     await api('git/refs', 'POST', { ref: `refs/heads/codex/claims/${id}`, sha: claim.sha });
     const claimRead = await api(`git/ref/heads/codex/claims/${id}`);
@@ -119,6 +127,7 @@ async function prepare() {
   }
 }
 function plan() {
+  demand(process.env.GITHUB_RUN_ATTEMPT==='1','REPLAY_DENIED');
   const p = read(path.join(out,'plan.json'));
   demand(p.schema === 'mss-dispatch-plan-v1' && p.run === runId && p.policy_hash === digest(JSON.stringify(policy)) && sha(p.base) && sha(p.progress) && p.branch === `codex/issue-${p.issue}` && /^MSS-\d{3}$/.test(p.goal), 'INVALID_PLAN');
   demand(p.base === process.env.GITHUB_SHA && p.base === git(trusted,['rev-parse','HEAD']), 'WRONG_TRUSTED_BASE');
@@ -225,6 +234,10 @@ async function publish() {
   let result={schema:'mss-worker-result-v1',run:p.run,goal:p.goal,source_commit:p.progress,state:'BLOCKED',reason:'WORKER_DID_NOT_COMPLETE',receipts:[]};
   if (fs.existsSync(path.join(out,'result.json'))) result=read(path.join(out,'result.json'));
   demand(result.schema==='mss-worker-result-v1' && result.run===p.run && result.goal===p.goal && sha(result.source_commit), 'INVALID_WORKER_RESULT');
+  demand(Array.isArray(result.receipts) && ['IN_REVIEW','BLOCKED'].includes(result.state),'INVALID_WORKER_STATE');
+  // Validate receipts before publishing any source object or opening a PR.
+  const receipts=result.receipts.length ? checkReceipts(result.receipts,p.checks,result.source_commit,{goal:p.goal,attempt:p.run}) : [];
+  const complete=result.state==='IN_REVIEW' && receipts.length===p.checks.length && receipts.every(r=>r.result==='PASS');
   let source=p.progress;
   if (result.source_commit!==p.progress) {
     const bundle=path.join(out,'worker.bundle');
@@ -240,10 +253,9 @@ async function publish() {
     const basic=Buffer.from(`x-access-token:${process.env.GH_TOKEN}`).toString('base64');
     git(trusted,['push','origin',`${source}:refs/heads/${p.branch}`],{GIT_CONFIG_COUNT:'1',GIT_CONFIG_KEY_0:'http.https://github.com/.extraheader',GIT_CONFIG_VALUE_0:`AUTHORIZATION: basic ${basic}`});
   }
-  const receipts=result.receipts.length ? checkReceipts(result.receipts,p.checks,source,{goal:p.goal,attempt:p.run}) : [];
-  const complete=result.state==='IN_REVIEW' && receipts.length===p.checks.length && receipts.every(r=>r.result==='PASS');
   // Publication uses fixed text, never raw model output or arbitrary broker logs.
   const pr=await api('pulls','POST',{head:p.branch,base:'main',draft:true,title:`MSS ${p.goal}: Issue #${p.issue}`,body:`Issue: https://github.com/${REPOSITORY}/issues/${p.issue}\n\nState: ${complete?'IN_REVIEW':'BLOCKED'}. Tested source: ${source}.\nChecks: ${receipts.map(r=>`${r.check_id}=${r.result}`).join(', ')||'NOT_RUN (worker failed or unavailable)'}.\nEvidence: goals/events/ in this branch. Toolkit parity: NOT_VERIFIED.\nNo automatic merge or VERIFIED transition. Run: https://github.com/${REPOSITORY}/actions/runs/${p.run}`});
+  demand(typeof pr.html_url==='string' && /^https:\/\/github\.com\/paulgreenbox-beep\/makepad-sandstudio\/pull\/[1-9]\d*$/.test(pr.html_url),'OUTCOME_UNKNOWN_NO_AUTOMATIC_RETRY');
   const goal=JSON.parse(git(trusted,['show',`${p.progress}:goals/${p.goal}.json`]));
   const safeReceipts=receipts.map(r=>({schema:r.schema,goal_id:p.goal,check_id:r.check_id,attempt:p.run,source_commit:source,runner:`approved-worker-${policy.worker_runner_id}`,command:r.command,started_at:r.started_at,ended_at:r.ended_at,result:r.result,exit_code:Number.isInteger(r.exit_code)?r.exit_code:null,test_summary:r.test_summary?{passed:r.test_summary.passed,failed:r.test_summary.failed,skipped:r.test_summary.skipped}:null,evidence:(r.evidence??[]).filter(e=>/^[a-f0-9]{64}$/.test(e.sha256??'') && e.ref===`sha256:${e.sha256}`).map(e=>({ref:e.ref,sha256:e.sha256})),evidence_ref:`goals/events/${p.goal}-${p.run}-${r.check_id}.json`}));
   const next=transition(goal,complete?'IN_REVIEW':'BLOCKED',{source,branch:p.branch,pr:pr.html_url,receipts:safeReceipts});

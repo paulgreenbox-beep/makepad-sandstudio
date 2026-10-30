@@ -43,7 +43,7 @@ jobs:
           if-no-files-found: error
   implement:
     needs: prepare
-    if: needs.prepare.outputs.ready == 'true'
+    if: needs.prepare.outputs.ready == 'true' && github.run_attempt == 1
     runs-on: [self-hosted, Windows, X64, mss-codex-worker]
     environment: mss-codex-owner-approved
     timeout-minutes: 45
@@ -108,7 +108,7 @@ jobs:
           if-no-files-found: ignore
   publish:
     needs: [prepare, implement]
-    if: always() && needs.prepare.outputs.ready == 'true'
+    if: always() && needs.prepare.outputs.ready == 'true' && github.run_attempt == 1
     runs-on: [self-hosted, Windows, X64, mss-codex-control]
     timeout-minutes: 10
     permissions:
