@@ -3,6 +3,8 @@ name = "mss-remote"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-
+[dependencies]
+mss-core = { path = "../MSS_Core" }
+mss-api = { path = "../MSS_API" }
 [lib]
 path = "src/lib.rs"
