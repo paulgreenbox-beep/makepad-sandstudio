@@ -4,5 +4,12 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 
+[dependencies]
+makepad-widgets = { git = "https://github.com/makepad/makepad", rev = "130be1d0318adcf69453d925342607466353152c", version = "2.0.0", default-features = false }
+
 [lib]
 path = "src/lib.rs"
+
+[[bin]]
+name = "mss-desktop"
+path = "src/main.rs"
