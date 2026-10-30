@@ -92,6 +92,7 @@ impl RemoteGate {
             RemoteCommand::Text(w, value) => (w, Some(value)),
         };
         if target.automation_id.trim().is_empty()
+            || target.automation_id.trim() != target.automation_id
             || target.automation_id.len() > 256
             || target.automation_id.chars().any(char::is_control)
             || text
@@ -337,4 +338,37 @@ mod tests {
             )))
         );
     }
+    #[test]
+    fn rejects_noncanonical_padded_widget_addresses_without_dispatch() {
+        let mut registry = SessionRegistry::new();
+        let agent = registry.register_agent().unwrap();
+        let session = registry.create_session(agent, "one").unwrap();
+        let ctx = RequestContext {
+            agent,
+            session: registry.get_session(session).unwrap().handle(),
+        };
+        let api = Api::new(&registry);
+        let mut gate = RemoteGate::new();
+        for id in [" input.name", "input.name ", "\\u{00a0}input.name", "input.name\\u{2003}"] {
+            let intent = RemoteCommand::Read(WidgetTarget {
+                automation_id: id.to_owned(),
+            });
+            assert_eq!(
+                gate.submit(&api, ctx, CommandSequence(1), &intent),
+                Err(RemoteError::InvalidInput)
+            );
+        }
+        assert_eq!(
+            gate.submit(
+                &api,
+                ctx,
+                CommandSequence(1),
+                &RemoteCommand::Read(WidgetTarget {
+                    automation_id: "input.name".to_owned(),
+                })
+            ),
+            Err(RemoteError::NotDispatched)
+        );
+    }
+
 }
