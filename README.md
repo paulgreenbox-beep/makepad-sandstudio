@@ -36,3 +36,9 @@ Native multi-session GUI laboratory for Makepad applications and AI agents.
 5. Validate privilege, file/network, and failure containment boundaries.
 
 See [architecture](doc/architecture.md), [maps](doc/maps.md), [compatibility](doc/compatibility.md), [testing](doc/testing.md), [security](SECURITY.md), and [agent instructions](AGENTS.md).
+
+## Native Desktop prototype
+
+The initial native Makepad Desktop binary is in [MSS_Desktop/src/main.rs](MSS_Desktop/src/main.rs), pinned to upstream Makepad dev commit `130be1d0318adcf69453d925342607466353152c`. It renders an illustrative three-slot session sidebar, status labels and a last-frame placeholder. **It is not connected to live sessions, render transfer or Toolkit tests.** To build in a prepared Rust environment: `cargo run -p mss-desktop` (native acceptance NOT_RUN).
+
+MSS module declarations are in [SKLT](doc/dungeon.md); GLIF/GLYF projections deferred.
