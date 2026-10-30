@@ -1,0 +1,38 @@
+{
+  "schema": "mss-goal-v1",
+  "id": "MSS-001",
+  "title": "Compile and smoke native MSS Desktop",
+  "module_ids": [
+    "mss.desktop"
+  ],
+  "status": "TODO",
+  "branch": null,
+  "pr_url": null,
+  "owner_agent": null,
+  "source_commit": null,
+  "dependencies": [],
+  "acceptance": [
+    "Desktop compiles with exact Makepad revision",
+    "Real Windows window opens and closes normally",
+    "Sidebar and last-frame placeholder are visible",
+    "No claim of native GPU child rendering"
+  ],
+  "required_checks": [
+    {
+      "id": "RUST_FMT",
+      "status": "NOT_RUN",
+      "evidence_ref": null
+    },
+    {
+      "id": "WORKSPACE_CHECK",
+      "status": "NOT_RUN",
+      "evidence_ref": null
+    },
+    {
+      "id": "WINDOWS_DESKTOP",
+      "status": "NOT_RUN",
+      "evidence_ref": null
+    }
+  ],
+  "notes": "No native Windows acceptance captured."
+}
