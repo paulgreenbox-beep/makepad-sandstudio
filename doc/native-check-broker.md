@@ -13,6 +13,7 @@ Issue [#8](https://github.com/paulgreenbox-beep/makepad-sandstudio/issues/8) is 
 | GOAL registry, PR #5 | `9c0e867f8844a6bc7949c7705db5c2cbbb65ef1c` | Existing `mss-goal-v1`, index and check catalog. |
 | Dispatcher, PR #7 | `d83520d931ab000574c5c02192b9f49da86a34ea` | Existing request/receipt contract, disabled policy and separated controller/worker/publisher. |
 | Initial broker foundation, PR #9 | `76d21f9be8a367715ee1b39ca7b31e79109f3526` | The previous non-executing request parser; not native execution evidence. |
+| Developed stage, tested source | `1a52fff0a894bdf19138ed1184c1d32b5ac94794` | Exact implementation tested for the results below; later documentation/evidence commits do not change that tested code. |
 | `windows-sys` | `0.61.2`; crate VCS `32c3144490c016fe496a0aed769bce60987a2e9d` | Cached Windows bindings, MIT OR Apache-2.0. |
 | `sha2` | `0.10.9`; crate VCS `82c36a428f8d6f05f3bfccdedb243e9d1f85359d` | Cached digest implementation, MIT OR Apache-2.0. |
 
@@ -32,6 +33,8 @@ The public binding API does not authenticate whoever constructs its expected con
 
 The feature-gated supervisor constructs a restricted version of its own token with disabled maximum privileges, a deny-only Administrators SID, restricting SIDs and low integrity. It queries token groups, elevation, integrity and enabled privileges. The intended child must be suspended while the supervisor reads its actual token and verifies Job membership and Win32k mitigation before resuming it. This uses [CreateRestrictedToken](https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-createrestrictedtoken) and [CreateProcessAsUserW](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessasuserw). Neither the token-creation flags nor `IsTokenRestricted` alone establish complete isolation.
 
+The RC, World and Builtin Users restricting SIDs are common identities. They are not fresh per-attempt or per-session security principals. The ACL probes deliberately control their synthetic object descriptors; passing those tests does not establish isolation between arbitrary same-user sessions, profiles, credentials or processes.
+
 The image is opened without write/delete sharing, hashed, and identified by its file identity. Non-reparse ancestor handles are retained without delete sharing through launch. This prevents replacement of a pinned fixture file/object within the tested handle lifetime; it is not an immutable repository checkout or an audit of every loaded DLL.
 
 Process construction uses an explicit executable path and separately quoted argument vector without a shell. `PROC_THREAD_ATTRIBUTE_JOB_LIST` associates the new process with its owned Job at creation, while `PROC_THREAD_ATTRIBUTE_HANDLE_LIST` admits only null stdin and the selected output pipe handles. The Job handle is not a general inherited capability. The implementation requests Win32k system-call disable mitigation and checks the actual child policy. See Microsoft's [process attribute documentation](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-updateprocthreadattribute).
@@ -46,18 +49,23 @@ A dedicated service account alone is not a demonstrated solution to station erro
 
 ## What local observations establish
 
-Development checks are observations at the recorded working source, not independent release/security acceptance. The PR receipt must bind final results to an exact commit and executable identity.
+The following checks were observed at exact source `1a52fff0a894bdf19138ed1184c1d32b5ac94794`. [Development evidence](../native-check-broker/evidence/20261030-development.json) records source/log hashes and commands. These are development observations, not independent release/security acceptance or a qualified `mss-check-receipt-v1` execution.
 
 | Check | Observed result | Practical limit |
 |---|---|---|
+| Required `cargo fmt`, default all-target `cargo check`, default `cargo test` | PASS | Default tests comprise 17 protocol and three actual production-refusal tests; 20 passed. |
+| Feature all-target `cargo check` | PASS | Compiles native supervisor/probe/tests; not execution evidence. |
+| Feature library tests | PASS, 21 tests | The 17 protocol cases plus the four OS primitive tests below. |
 | Protocol/catalog/GOAL unit tests | PASS, 17 tests | Pure validation/binding tests; no native child is started. |
+| Production binary refusal tests | PASS, three tests | Real binary refuses valid real-catalog requests, environment/argument authority, unknown fields and oversized input without stdout receipts. |
 | `effective_restricted_token_has_observed_privilege_and_integrity_limits` | PASS | Real token queries on a newly created restricted token; not a complete child or network boundary. |
 | `os_access_checks_deny_private_fixture_reads_and_writes_under_restricted_token` | PASS | Real `ImpersonateLoggedOnUser` thread access checks: private/sibling synthetic sentinel reads and a private write return `ERROR_ACCESS_DENIED` (5); allowed fixture access succeeds. This is not a separately launched child. |
 | `job_limits_are_read_back_from_the_real_kernel_object` | PASS | Real Job configuration and empty accounting readback, not limit-exhaustion or descendant proof. |
-| `consumed_attempt_is_denied_by_create_new_before_and_after_handle_loss` | Pending final source-bound result | A persistent create-new file fence is implemented and tested against repeated opens. Production root ownership, controller authentication and crash/recovery policy remain unqualified. |
-| Supervisor child launch | FAIL / subsequent paths BLOCKED | An initial named-station attempt returned access denied. The nonadministrator null-name/create-only path then returned `ERROR_ALREADY_EXISTS` (183). No fallback to the existing station/default desktop/elevation is allowed. |
-| Independent image-pin test | Pending source-bound result | Can run without child launch; do not infer its result from token or parser checks. |
-| WFP/network and symlink integration cases | NOT_RUN | Explicit unmet prerequisites, not passing skipped coverage. |
+| `consumed_attempt_is_denied_by_create_new_before_and_after_handle_loss` | PASS | Real filesystem create-new denial both before and after closing the first handle. Production root ownership, controller authentication and crash/recovery policy remain unqualified. |
+| Complete `native_windows` integration suite | FAIL: one passed, eight failed, two ignored | The child paths fail behind `ERROR_ALREADY_EXISTS` (183) at private-station creation; supervisor EOF failures are secondary. The intended child assertions were not reached. No existing station/default desktop/elevation fallback is allowed. |
+| `image_digest_and_held_file_object_prevent_replacement` | PASS | Real wrong-digest rejection plus Windows sharing violation (32) on write/delete while the pinned image is held. No child launch is required. |
+| WFP/network and symlink integration cases | NOT_RUN, two ignored | Explicit unmet prerequisites, not passing skipped coverage. |
+| Dispatcher compatibility tests | PASS, 80 tests | Existing Node routing/authorization/receipt contracts; no model calls and no production broker qualification. |
 
 The local CIM snapshot identified GIGABYTE AERO X16 hardware, Windows 11 build 26300 and a nonadministrator context, with `HypervisorPresent=true`. That flag can have more than one interpretation and does not independently qualify a physical runner or establish that no guest environment exists. No container, WSL, VM or Hyper-V execution environment was created for this stage. Independent physical-host qualification remains `NOT_VERIFIED`.
 
@@ -69,17 +77,17 @@ Each row preserves the user's original obligation. A parser refusal is not prese
 |---|---|---|
 | 1 | Unknown commands | PASS in pure catalog/scope binding tests; only exact approved metadata/argv can bind. No arbitrary command is executed. |
 | 2 | Shell injection | PASS for pure rejection of shell tool substitution/altered argv. The supervisor uses no shell; adversarial child-process command-line proof remains NOT_RUN behind the launch blocker. |
-| 3 | Executable-path substitution | Image digest/file identity/held handles implemented; independent real-file pin/share-denial test result must be recorded separately. No production executable registry is qualified. |
+| 3 | Executable-path substitution | PASS for the real image-pin fixture: wrong digest rejected, held image write/delete denied with Windows sharing error 32. Loaded DLLs, launch-path proofs and a production executable registry remain unqualified. |
 | 4 | Checkout substitution after validation | BLOCKED: protected source import and immutable exact-commit materializer are not implemented. The agent worktree is never accepted as source evidence. |
 | 5 | Symlink/junction/reparse attacks | Lexical alias rejection and image ancestor reparse checks implemented. The symlink OS integration case is NOT_RUN pending fixture privileges; junction/full checkout attacks remain unqualified. |
 | 6 | Write outside admitted directory | PASS only for real restricted-token thread denial of an owned private synthetic fixture. Separately launched child coverage is blocked; broad host isolation is NOT_VERIFIED. |
 | 7 | Read secrets | PASS only for OS denial of owned synthetic private/sibling sentinels under impersonation. No real secrets were read. Parent memory, credentials, user-profile and all handle channels are not fully qualified. |
 | 8 | Network outside policy | BLOCKED / NOT_RUN: no WFP/network enforcement is supplied. The opt-in test requires a trusted positive control to an actually listening owned loopback endpoint and an OS access-denied result; a closed port is insufficient. |
-| 9 | Child processes | Job assignment/limits implemented and queried. Descendant child tests are NOT_RUN/BLOCKED at private-station creation, so inheritance/escape behavior is not proven. |
-| 10 | Timeout and cancellation | Owned-Job timeout/cancellation logic implemented; successful launched-child negative evidence remains NOT_RUN/BLOCKED. |
-| 11 | Loss of supervisor | A real fixture test retains verified PID/birth/image handles before terminating its own supervisor, but this path is blocked at launch. NOT_RUN for child-lifetime acceptance. |
+| 9 | Child processes | Job assignment/limits implemented and queried. The attempted integration suite FAILS before descendant assertions at private-station creation; inheritance/escape behavior remains BLOCKED/NOT_VERIFIED. |
+| 10 | Timeout and cancellation | Owned-Job logic implemented; the attempted child tests FAIL behind the launch prerequisite, so actual timeout/cancellation containment remains BLOCKED/NOT_VERIFIED. |
+| 11 | Loss of supervisor | The attempted fixture tests FAIL behind station creation (including secondary EOF). Verified-child lifetime assertions were not reached; supervisor-loss acceptance remains BLOCKED/NOT_VERIFIED. |
 | 12 | Incomplete cleanup | Synthetic ACL fixture cleanup is observed within its test. Job/process-tree drain, incomplete output and abnormal teardown cases remain unqualified while launch is blocked. |
-| 13 | Repeated attempt | Canonical run-ID/foreign expected-context rejection passes pure tests. A persistent create-new fence primitive is implemented; its independent final run result must be recorded. The protected production root, authenticated grant and recovery binding are not qualified; repeated execution is not enabled. |
+| 13 | Repeated attempt | PASS for canonical/foreign binding tests and actual create-new filesystem replay denial before/after handle closure. The protected production root, authenticated grant and recovery binding are not qualified; production replay authority is not enabled. |
 | 14 | Receipt substitution/reuse | BLOCKED: production emits no receipts. Protected evidence storage/authenticity and independent retrieval/signing still need implementation and qualification; digest-shaped strings alone prove nothing. |
 | 15 | Neighbor session resources | Real restricted-token thread denial is observed for an owned synthetic sibling file. Separate identities, profiles, process/memory handles and complete neighboring-session isolation remain NOT_VERIFIED. |
 

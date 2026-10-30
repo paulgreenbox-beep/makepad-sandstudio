@@ -12,12 +12,25 @@ primitives and an owner-controlled probe image. It is not connected to stdin
 requests. It must not be used to route model-provided code or argv into native
 execution. See [the design, actual results and 15-category coverage matrix](../doc/native-check-broker.md).
 
+At tested source `1a52fff0a894bdf19138ed1184c1d32b5ac94794`, required formatting,
+all-target checking and default tests passed: 17 protocol tests and three real
+production-refusal tests. Feature all-target checking passed, and the feature
+library tests passed 21 cases (17 protocol plus four real OS primitive tests).
+The complete native integration suite **failed**: one image-pin test passed,
+eight child-path tests failed behind station creation/secondary EOF blockers,
+and the network/symlink cases were `NOT_RUN` (two ignored prerequisites).
+Dispatcher compatibility tests passed 80 cases. See the
+[source-bound development evidence](evidence/20261030-development.json);
+none of these results qualifies production execution.
+
 ## Implemented boundary
 
 - Strict `mss-native-check-request-v1` parsing, canonical identifiers and exact
   binding to typed existing GOAL/catalog documents and a protected-context API.
 - Probe-only restricted token with low integrity; token facts are queried rather
   than inferred from creation flags.
+  Its RC/World/Users restricting SIDs are common SIDs, not per-session principals.
+  Synthetic ACL denials do not establish full neighboring-session isolation.
 - Image digest/file identity and held non-reparse image/ancestor handles.
 - Suspended process construction with explicit inherited handles, atomic Job
   assignment, Win32k mitigation and a private noninteractive station/desktop.
@@ -52,6 +65,7 @@ On an independently approved Windows host, the opt-in native checks are:
 
 ```powershell
 cargo test --manifest-path native-check-broker/Cargo.toml --features native-probes --lib native::tests --offline -- --nocapture
+cargo check --manifest-path native-check-broker/Cargo.toml --features native-probes --all-targets --offline
 cargo test --manifest-path native-check-broker/Cargo.toml --features native-probes --test native_windows --offline -- --test-threads=1
 ```
 

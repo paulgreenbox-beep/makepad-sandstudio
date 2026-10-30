@@ -1,0 +1,170 @@
+{
+  "schema": "mss-broker-development-evidence-v1",
+  "source_commit": "1a52fff0a894bdf19138ed1184c1d32b5ac94794",
+  "source_baseline": "76d21f9be8a367715ee1b39ca7b31e79109f3526",
+  "dispatcher_baseline": "d83520d931ab000574c5c02192b9f49da86a34ea",
+  "started_at": "2026-10-30T13:04:07.7030806Z",
+  "ended_at": "2026-10-30T13:04:17.5848419Z",
+  "environment": {
+    "cargo_net_offline": true,
+    "administrator": false,
+    "build": "26300",
+    "rustc": "1.97.1",
+    "hypervisor_present": true,
+    "physical_host_independent_qualification": "NOT_VERIFIED",
+    "reported_hardware": "GIGABYTE AERO X16 1VH",
+    "os": "Windows 11 Pro"
+  },
+  "checks": [
+    {
+      "name": "fmt",
+      "command": [
+        "cargo",
+        "fmt",
+        "--manifest-path",
+        "native-check-broker/Cargo.toml",
+        "--",
+        "--check"
+      ],
+      "exit_code": 0,
+      "result": "PASS",
+      "evidence_ref": "local-evidence:mss-broker-1a52fff-fmt.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "cargo-check",
+      "command": [
+        "cargo",
+        "check",
+        "--manifest-path",
+        "native-check-broker/Cargo.toml",
+        "--all-targets"
+      ],
+      "exit_code": 0,
+      "result": "PASS",
+      "evidence_ref": "local-evidence:mss-broker-1a52fff-cargo-check.log",
+      "sha256": "d74aa2faff24e3d0aafe49640bcfa5247ccc4260814d116f9e906f0f3effe8a3"
+    },
+    {
+      "name": "cargo-test",
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "native-check-broker/Cargo.toml"
+      ],
+      "exit_code": 0,
+      "result": "PASS",
+      "evidence_ref": "local-evidence:mss-broker-1a52fff-cargo-test.log",
+      "sha256": "07cad37fa529c220e82427afdd9e4e66cdc91a67cf5404b77e43da8151fcdb85"
+    },
+    {
+      "name": "native-check",
+      "command": [
+        "cargo",
+        "check",
+        "--manifest-path",
+        "native-check-broker/Cargo.toml",
+        "--all-targets",
+        "--features",
+        "native-probes"
+      ],
+      "exit_code": 0,
+      "result": "PASS",
+      "evidence_ref": "local-evidence:mss-broker-1a52fff-native-check.log",
+      "sha256": "f10eaa1aa3de2690bbc5a2930a6a32c5e1c2a6badb5dfe66cf1cf661b669c493"
+    },
+    {
+      "name": "native-lib",
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "native-check-broker/Cargo.toml",
+        "--features",
+        "native-probes",
+        "--lib"
+      ],
+      "exit_code": 0,
+      "result": "PASS",
+      "evidence_ref": "local-evidence:mss-broker-1a52fff-native-lib.log",
+      "sha256": "e0fe46df21abe2584955b2794ec6d1119b1c4217c86bd97f4d6e69fe8e9d646c"
+    },
+    {
+      "name": "native-integration",
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "native-check-broker/Cargo.toml",
+        "--features",
+        "native-probes",
+        "--test",
+        "native_windows",
+        "--",
+        "--test-threads=1",
+        "--nocapture"
+      ],
+      "exit_code": 101,
+      "result": "FAIL",
+      "evidence_ref": "local-evidence:mss-broker-1a52fff-native-integration.log",
+      "sha256": "76fc637710396d7c98a5bd61a548ece61e8e94e84d31d18d4c73d81dd678d0ee"
+    },
+    {
+      "name": "dispatcher-compatibility",
+      "command": [
+        "node",
+        "--test",
+        "scripts/codex-issue/test/dispatcher.test.mjs"
+      ],
+      "exit_code": 0,
+      "result": "PASS",
+      "evidence_ref": "local-evidence:mss-broker-1a52fff-dispatcher-compatibility.log",
+      "sha256": "433df2fbb05e2a1a1e8d2d933d8a574498a133cd18e207e00ae68c0f264c0a66"
+    },
+    {
+      "name": "diff",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "result": "PASS",
+      "evidence_ref": "local-evidence:mss-broker-1a52fff-diff.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "summary": {
+    "feature_library_tests_passed": 21,
+    "native_integration_ignored_not_run": 2,
+    "native_integration_failed": 8,
+    "production_refusal_tests_passed": 3,
+    "native_integration_passed": 1,
+    "dispatcher_tests_passed": 80,
+    "protocol_tests_passed": 17,
+    "real_native_primitive_tests_passed": 4
+  },
+  "production_execution": "BLOCKED",
+  "native_child_qualification": "FAIL",
+  "blocker": "CreateWindowStationW CWF_CREATE_ONLY returns ERROR_ALREADY_EXISTS 183; no existing station is reused, and no user-desktop/admin/breakaway fallback is allowed",
+  "unverified": [
+    "authenticated controller authority",
+    "protected exact-source object import and clean checkout",
+    "distinct execution identity and profile isolation",
+    "per-session filesystem boundary",
+    "WFP IPv4/IPv6 network refusal",
+    "child token/handle/Job execution gates",
+    "timeout/cancel/parent-loss cleanup qualification",
+    "production source-bound receipt and evidence authority"
+  ],
+  "limits": {
+    "secrets_installed": false,
+    "common_restricted_code_sid": "Does not isolate independently writable neighboring workspaces",
+    "native_file_access_denial": "Observed under thread impersonation only; not a child process proof",
+    "job_limits": "Read back from kernel; no CPU/RAM exhaustion proof",
+    "network_and_symlink": "Explicit NOT_RUN prerequisites, no mock acceptance",
+    "model_calls": 0,
+    "dispatcher_enabled": false
+  }
+}
