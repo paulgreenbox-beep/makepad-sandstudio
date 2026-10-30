@@ -1,8 +1,15 @@
-# MSS_API — Typed interface
+# MSS_API
 
-Status: **DESIGN ONLY**.
+## Responsibility
 
-Single stable façade over Core, Remote, Render and existing Toolkit verification. MCP forwards operations here; no runtime implementation yet.
+Define the single backend contract used by MSS_Desktop, MSS_MCP, MSS_Remote, test workers, and MSS_Render for sessions, applications, GUI operations, tests, frames, evidence, and cleanup.
 
-## Boundaries
-Every call requires approved session/owner identity; no global input, implicit native fallback or fabricated PASS. See [architecture](../doc/architecture.md) and [parity](../doc/compatibility.md).
+## Planned contract
+
+The API owns authorization, session routing, capability checks, request correlation, idempotency declarations, failure taxonomy, and evidence linkage. It distinguishes a request accepted for dispatch from an independently observed result. Mutations with uncertain outcomes are never retried automatically.
+
+Draft operation names and status envelopes are documented in doc/architecture.md. They are design proposals, not stable public APIs.
+
+## Current state
+
+No API schema, server, transport, permission layer, or business logic is implemented. API compatibility is NOT_VERIFIED.
