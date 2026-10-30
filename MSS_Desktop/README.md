@@ -1,14 +1,17 @@
-# MSS_Desktop — Native Makepad viewer
+# MSS_Desktop
 
-Status: **DESIGN ONLY**.
+## Responsibility
 
-Proposed left session list and right selected native frame, with status, tests, logs and evidence. No renderer/UI is implemented yet.
+Build the native Makepad desktop interface: session and app tabs, agent and test status, lifecycle controls, evidence access, and a selected-app viewing area.
 
-## Boundaries
-Every call requires approved session/owner identity; no global input, implicit native fallback or fabricated PASS. See [architecture](../doc/architecture.md) and [parity](../doc/compatibility.md).
+## Planned interaction
+
+The left panel shows independent sessions and their lifecycle/test state. The right panel displays a fresh frame delivered for the selected session by MSS_Render. All UI actions call MSS_API with the selected session identity; switching tabs must not transfer keyboard focus or input to another application.
+
+The HostedView found in upstream Makepad presents full and tile views of one app and does not implement this multi-process host. The MSS interface remains a separate planned application.
 
 ## Current source prototype
 
-See [main.rs](src/main.rs): native Makepad UI with three selectable **illustrative** session entries, left status sidebar and right explicit no-frame area. Uses pinned upstream `dev` revision `130be1d0318adcf69453d925342607466353152c`. No process management, native window hosting, screenshots, Toolkit execution or runtime acceptance is implemented.
+The native shell in [src/main.rs](src/main.rs) renders a top bar, three illustrative session rows, status labels, and a no-frame placeholder. It uses the Makepad revision pinned in [Cargo.toml](Cargo.toml). It has no session backend, process ownership, app capture, Toolkit runner, or live accessibility contract. The view is a GUI prototype, not MSS runtime acceptance.
 
-Build in an approved Windows Makepad toolchain using `cargo run -p mss-desktop`; not yet executed or compiled in CI.
+The prototype has not been compiled or exercised as a live application in this task. The full workspace Cargo check, if successful, proves compilation only.

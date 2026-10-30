@@ -108,8 +108,12 @@ impl App {
     fn select(&mut self, cx: &mut Cx, name: &str) {
         self.ui.label(cx, ids!(selected_title)).set_text(cx, name);
         self.ui.label(cx, ids!(session_status)).set_text(cx, name);
-        self.ui.label(cx, ids!(runtime_status)).set_text(cx, "State: NOT_CONNECTED");
-        self.ui.label(cx, ids!(agent_status)).set_text(cx, "Agent: unassigned");
+        self.ui
+            .label(cx, ids!(runtime_status))
+            .set_text(cx, "State: NOT_CONNECTED");
+        self.ui
+            .label(cx, ids!(agent_status))
+            .set_text(cx, "Agent: unassigned");
     }
 }
 

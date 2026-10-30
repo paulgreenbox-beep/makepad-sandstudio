@@ -1,15 +1,15 @@
-# MSS_Remote — Addressed input
-
-Status: **DESIGN ONLY**.
+# MSS_Remote
 
 ## Responsibility
-Transports commands to the exact owned Makepad app, rejects cross-session/stale widget addressing.
 
-## Boundary
-No implicit fallback to global Windows mouse/keyboard.
+Deliver a command to exactly one session's Makepad application and verify that the reply belongs to the expected app, session generation, and process identity.
 
-## Expected interfaces
-Explicit session identity, generation, typed success/refusal, cancellation and evidence correlation. Concrete interfaces require design review and tests before exposure.
+## Planned boundary
 
-## Dependencies
-See [architecture](../doc/architecture.md) and [Toolkit parity](../doc/compatibility.md). No external executable or Makepad source is bundled.
+MSS_Remote is an adapter around an application-owned control channel. It should validate the launched process identity and discovered endpoint, correlate requests, bound payloads and timeouts, classify pre-dispatch refusal versus uncertain outcome, and require independent postcondition observation for mutations. Session policy and business logic stay in MSS_API/Core.
+
+Official Makepad --remote is a concrete source-inspected integration candidate. The inspected implementation is app-local and routes commands through the app event loop. The public source does not prove per-agent authentication, Toolkit operation parity, or that every command can be addressed without desktop-global side effects. The tools-2 adapter remains an experiment.
+
+## Current state
+
+No command transport, security gateway, semantic parity, retry policy, or live app proof is implemented. All are NOT_VERIFIED. A physical input fallback must not silently replace a semantic operation.

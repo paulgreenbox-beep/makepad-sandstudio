@@ -1,7 +1,19 @@
-# MSS_Skills — agent operating guidance
+# MSS_Skills
 
-Status: design only. No tools or authorization are granted by these instructions.
+No tools, credentials, or session permissions are granted by this module. It contains documentation only.
 
-Agents must read [AGENTS.md](../AGENTS.md), [SECURITY.md](../SECURITY.md) and [compatibility](../doc/compatibility.md). Always bind exact SessionId, owner, process incarnation, widget identity and evidence scope. After action request, independently verify state and application health; never infer success from an acknowledgment. Unknown results must be fenced without blind replay. Never operate another session or fall back to global desktop input.
+## Responsibility
 
-Planned skills: session management, GUI inspection, verified input, frame capture, Toolkit scenario execution, diagnostics, cancellation, owned cleanup.
+Give AI agents concise, versioned instructions for discovering MSS capabilities, binding to their assigned session, using MCP/API/SDK safely, interpreting outcomes, and preserving test evidence.
+
+## Planned contents
+
+- A capability and status glossary that never equates acknowledgement with success.
+- Session binding and authorization rules.
+- .aiui.json preservation and test-run instructions.
+- Safe handling of NOT_VERIFIED, OUTCOME_UNKNOWN, runtime failures, and cleanup failures.
+- Examples that use public MSS_API/MCP contracts and do not bypass session ownership.
+
+## Current state
+
+This README is the only skill content. No installable agent skill package or tool integration is available yet.
