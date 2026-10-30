@@ -12,7 +12,7 @@ dispatcher. Do not install or configure it there. The executable target is named
 
 ## Source checks
 
-From this directory:
+From the repository root:
 
 ```powershell
 cargo test --manifest-path native-check-broker/Cargo.toml
