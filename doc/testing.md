@@ -22,6 +22,7 @@ The parity row stays NOT_VERIFIED until the complete unchanged baseline runs aga
 
 | Toolkit/source contract | Required MSS behavior and proof | Status |
 |---|---|---|
+| Core logical registry, object `mss.core` | In-memory ownership/generation checks, allocation exhaustion and refusal nonmutation; source-bound unit results in the Core development record below | PASS |
 | session.open, session.list, session.close | Per-agent ownership, no silent default-session fallback, identity-checked close, verified process/resource release | NOT_VERIFIED |
 | App executable and literal argument launch | Separate process per app; trusted executable policy; exact PID/birth/path/digest evidence; no shell-string execution | NOT_VERIFIED |
 | inspect_ui, inspect_semantic, read | Session-scoped semantic tree/state and independent readback, including stale/unknown target errors | NOT_VERIFIED |
@@ -44,6 +45,32 @@ The parity row stays NOT_VERIFIED until the complete unchanged baseline runs aga
 | Cargo workspace check | cargo check --workspace --all-targets for the seven-member published workspace | PASS |
 
 These two scaffold checks do not imply any runtime acceptance.
+
+## Core logical registry verification
+
+PR #1 keeps the registry's public interface and logical behavior, preserves its
+seven original tests, and adds five boundary/refusal tests. At tested source
+`3ca93bbc94823651b0974d09e85cee1f37196251`, all twelve Core tests passed. The
+[append-only Core development record](cronica/20261030-core-pr1.json) identifies
+the exact commands, source, result summaries and local raw-log digests.
+
+| Contract in this slice | Observed Core proof | Limit |
+|---|---|---|
+| ID allocation | Nonzero, monotonic IDs; closed IDs are not reused; the last `u64` agent/session ID succeeds and further allocation refuses without wrap or loss of existing state | IDs are local to one registry, not authenticated external identities |
+| Ownership and generation | Foreign owner, stale generation and closed handle are refused; the live records and existing selection remain unchanged | No process, window, widget or network caller is authenticated |
+| Selection and logical close | Owned selection succeeds; closing a nonselected neighbor preserves the selection; closing the selected session clears it and removes only that record | Logical removal is not OS process shutdown or resource-cleanup evidence |
+| Invalid creation | Invalid titles and an unregistered agent are refused without consuming a session ID or modifying existing state | This is the registry input contract, not a general application security boundary |
+
+The cheapest first proof was the original seven-test Core suite after integrating
+the current main baseline. The final path uses locked, offline package tests and
+then workspace formatting/check/test gates; their actual outcomes are retained
+in the development record rather than inferred from the presence of tests.
+
+Workspace checks cover the seven members present in this PR's tree. The API,
+Remote and Render implementations proposed in PR #2–#4 remain separate branches;
+their combined execution is `NOT_RUN` here. Public Core compatibility with PR #2
+was reviewed at source level only. Native process identity/lifecycle, GUI,
+parallel Makepad sessions and full Toolkit parity remain `NOT_VERIFIED`.
 
 ## Public operation matrix
 
