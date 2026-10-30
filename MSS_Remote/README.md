@@ -12,4 +12,19 @@ Official Makepad --remote is a concrete source-inspected integration candidate. 
 
 ## Current state
 
-No command transport, security gateway, semantic parity, retry policy, or live app proof is implemented. All are NOT_VERIFIED. A physical input fallback must not silently replace a semantic operation.
+The Rust `RemoteGate` checks exact session/agent authorization through MSS_API,
+nonzero command identity, and typed Read/Focus/Text input shape. AutomationId is
+bounded to 256 UTF-8 bytes and text to 4096; empty addresses and control characters
+are refused. This does not prove widget existence, an approved WidgetId mapping,
+focus ownership, capability, or operation parity.
+
+Every valid command returns `NotDispatched`; no input is emitted and no success
+is fabricated. Cancellable submission can refuse before admission. The unused
+completed-command map from PR #3 was removed: there is no dispatch to record.
+Repeated known-undispatched requests do not consume sequence identities. Actual
+replay fencing, bounded outcome tracking and uncertain-outcome recovery must be
+implemented together with the real transport. There is no automatic retry.
+
+Command transport, app authentication, native input, semantic execution and live
+postconditions remain NOT_IMPLEMENTED / NOT_VERIFIED. There is no physical-input
+fallback. See [integration tests and limitations](../doc/testing.md).

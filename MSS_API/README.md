@@ -12,4 +12,21 @@ Draft operation names and status envelopes are documented in doc/architecture.md
 
 ## Current state
 
-No API schema, server, transport, permission layer, or business logic is implemented. API compatibility is NOT_VERIFIED.
+`Api` borrows the single authoritative `SessionRegistry`. `RequestContext`
+contains the caller's logical agent and exact session generation. Authorization
+delegates to Core; API holds no parallel registry. Inspect/Capture are classified
+as observations and Input/Test as mutations. Every dispatch authorizes first,
+then returns `Unsupported` because no executor exists. These four classes are
+not replacements for the Toolkit operation catalog or `.aiui.json` schema.
+
+`CancellationToken` is an explicit shared, one-way flag. Cancellable authorization
+and dispatch check ownership before cancellation. Cancellation covers admission
+only; there is no running application operation to stop or roll back.
+`Operation::try_from` accepts exactly the four local class names; `dispatch_named`
+authorizes before parsing and refuses unknown names without a default. No wire
+protocol is implemented. Unimplemented operation classes never return a success.
+
+The in-process caller must already be trusted to supply its registered identity.
+Network/MCP authentication, per-widget capabilities, process identity, server,
+transport, Toolkit execution and native cancellation remain NOT_IMPLEMENTED or
+NOT_VERIFIED. See [contracts and tests](../doc/testing.md).

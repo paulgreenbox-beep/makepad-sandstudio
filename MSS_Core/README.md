@@ -26,8 +26,13 @@ consume a session ID or change the registry's selection or live records.
 
 ## Caller boundary
 
-All callers sharing a namespace must use the same registry. IDs from separate
-registries may have equal numeric values. An `AgentId` is not an authenticated
+All callers sharing sessions must use the same authoritative registry. Opaque
+IDs now include a process-local `RegistryId`; local `.get()` numbers alone may
+still match in separate registries and must never be used as cache keys or
+credentials. Namespaces are allocated atomically without reuse, including after
+registry drop. `try_new()` reports namespace exhaustion; the compatible `new()`
+constructor panics if that process-wide space is exhausted. Process restart is
+a new identity domain. An `AgentId` is not an authenticated
 external principal, and a `SessionHandle` is not a process/window identity.
 
 `get_session`, `list_sessions` and `set_selected_session` are trusted-controller
@@ -57,6 +62,8 @@ and [test scope](../doc/testing.md). Test execution verifies the declared logica
 registry contracts only. Native process identity/lifecycle, GUI isolation,
 parallel Makepad apps and full Toolkit parity remain `NOT_VERIFIED`.
 
-The existing API contract in PR #2 is a separate consumer branch. Its public
-Core types and method signatures are preserved here; that source review is not
-an execution receipt for the combined branches.
+The integration branch combines PR #1–#4 without rewriting their source history.
+`SessionGeneration::new` constructs a nonzero data value for checked requests;
+it grants no session authority. Existing public lookup/selection/close signatures
+are preserved. See [integration verification](../doc/testing.md) for the new
+combined-source evidence; the older Core record above remains historical.

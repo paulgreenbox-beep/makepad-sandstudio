@@ -46,7 +46,7 @@ The parity row stays NOT_VERIFIED until the complete unchanged baseline runs aga
 
 These two scaffold checks do not imply any runtime acceptance.
 
-## Core logical registry verification
+## Historical Core logical registry verification
 
 PR #1 keeps the registry's public interface and logical behavior, preserves its
 seven original tests, and adds five boundary/refusal tests. At tested source
@@ -66,11 +66,68 @@ the current main baseline. The final path uses locked, offline package tests and
 then workspace formatting/check/test gates; their actual outcomes are retained
 in the development record rather than inferred from the presence of tests.
 
-Workspace checks cover the seven members present in this PR's tree. The API,
-Remote and Render implementations proposed in PR #2–#4 remain separate branches;
-their combined execution is `NOT_RUN` here. Public Core compatibility with PR #2
-was reviewed at source level only. Native process identity/lifecycle, GUI,
-parallel Makepad sessions and full Toolkit parity remain `NOT_VERIFIED`.
+Those historical workspace checks cover the seven members at that Core source.
+API/Remote/Render combined execution was `NOT_RUN` in that record. The newer
+integration below adds that combined check; it does not retrospectively expand
+the older receipt. Native process identity/lifecycle, GUI, parallel Makepad
+sessions and full Toolkit parity remain `NOT_VERIFIED`.
+
+## PR #1–#4 integration verification
+
+The integration branch preserves all four source heads and tests through ordered
+nonrewriting merges. Exact input heads, tested source, commands, exit codes,
+test names and local-log digests are recorded in
+[the integration development record](cronica/20261030-integration-pr1-4.json).
+This is source-level Rust verification, not a production broker receipt or
+managed Dungeon/GOAL `VERIFIED` assignment.
+
+`CHEAPEST_VERIFICATION_PATH`: locked/offline tests for mss-core, mss-api,
+mss-remote and mss-render including the public composition tests; then the full
+explicit milestone gates below. Heavy Cargo commands run serially with two
+build jobs. No application, GUI, global input or model/API canary is launched.
+
+| Changed contract | Test surface | Acceptance boundary |
+|---|---|---|
+| Registry and ID lifetime | Original twelve Core tests plus namespace, final-ID exhaustion, no reuse after drop, checked generation tests | Process-local logical IDs; not authenticated persistent/external credentials |
+| API authorization and operation classes | Original two API tests, all four typed classes, exact-name parsing/unknown refusal, stale/closed/foreign-registry and cancellation precedence | One borrowed registry; no server, executor or per-widget capability system |
+| Remote admission | Original two Remote tests plus shape/UTF-8/control bounds, owner/generation/closed refusal and cancellation | Every valid intent returns NotDispatched; native delivery and replay/outcome ledger NOT_IMPLEMENTED |
+| Frame admission and deletion | Original three Render tests, ownerchecked removal, immutable Closed receipt, count/byte/watermark quotas, monotonic sequence and malformed PNG negatives | Bounded static PNG profile, synthetic producer only; no GPU or app authenticity evidence |
+| Combined public APIs | MSS_Render/tests/integration.rs, using actual public methods without authorization bypasses | Two logical sessions and their independent cached frames; no OS isolation claim |
+
+The composition tests cover all twelve requested scenarios:
+
+| Scenario | Public-interface test |
+|---|---|
+| 1–3: two sessions, different agents, independent API access | separate_agents_access_only_their_exact_sessions_through_api |
+| 4–5: authorized Remote admission, foreign-agent refusal | remote_authorization_refuses_foreign_call_and_never_reports_execution |
+| 6: stale generation | stale_generation_is_rejected_by_all_three_consumers_without_frame_changes |
+| 7–9: supplied PNG, frame identity and neighboring-frame refusal | populated_frame_cache_enforces_owner_and_publisher_session |
+| 10: close one session and preserve the other | close_and_receipt_cleanup_preserve_neighbor_and_refuse_closed_handle |
+| 11: cancellation and nonmutation | cancellation_before_dispatch_preserves_sessions_frames_and_ownership_checks |
+| 12: no success from missing backend | absent_backends_are_explicit_and_live_frame_removal_does_not_reset_sequence |
+| Additional namespace collision negative | equal_local_numbers_in_other_registries_cannot_cross_api_remote_or_frame_cache |
+
+Every original test name and its acceptance assertions remain. The Render
+positive fixture now contains a real 1x1 PNG instead of signature-plus-junk;
+that former junk is a new negative fixture. The original live `forget` call now
+passes API/context and checks its result. Core's private unknown-agent fixture
+includes its registry namespace. These changes strengthen the original cases.
+
+Required final commands (recorded with `--locked --offline` where applicable):
+
+1. `cargo metadata --format-version 1`
+2. `cargo fmt --all -- --check`
+3. `cargo check --workspace --all-targets`
+4. `cargo test --workspace --all-targets`
+5. `cargo clippy --workspace --all-targets -- -D warnings`
+6. `cargo build --workspace`
+7. `cargo build --workspace --release`
+8. `git diff --check`
+
+Compilation of the illustrative Desktop is covered; the Desktop is not started.
+A green release compilation is not release/runtime acceptance. No Toolkit test
+is edited, skipped or replaced. Its complete unchanged suite against MSS is
+`NOT_RUN`; full parity and native GUI sessions remain `NOT_VERIFIED`.
 
 ## Public operation matrix
 
@@ -130,8 +187,11 @@ Lower layers do not replace a required higher layer. Tests must not launch or de
 - Evidence references and hashes for required reports, screenshots, traces, and cleanup.
 - Proof of no cross-session routing or artifacts for parallel acceptance.
 
-## Current results
+## Historical scaffold results
 
 On 2026-10-30, `cargo metadata --no-deps --format-version 1` and `cargo check --workspace --all-targets` passed for the seven-member workspace using the exact Makepad revision recorded in `Cargo.lock`. `cargo fmt --all -- --check` and `git diff --check` also passed. Cargo reported duplicate package names inside the pinned Makepad source tree and copied incremental-cache files where hard links were unavailable; these warnings did not prevent the check from completing.
 
-No MSS behavioral test has run. The complete unchanged Toolkit regression suite remains NOT_RUN for this architecture-scaffold task. Runtime, GUI, multi-session, addressed-input, rendering, MCP, and cleanup acceptance remain NOT_VERIFIED as shown in the matrix above.
+At that scaffold checkpoint no MSS behavioral test had run. Later logical Core
+and combined integration results are recorded separately above. Runtime, GUI,
+multi-process sessions, addressed native input, GPU rendering, MCP and OS cleanup
+acceptance remain NOT_VERIFIED as shown in the matrix above.

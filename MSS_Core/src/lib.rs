@@ -9,26 +9,70 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fmt;
 use std::num::NonZeroU64;
+use std::sync::atomic::{AtomicU64, Ordering};
 
-/// Stable, nonzero identity allocated by one registry. Never reused in its lifetime.
+static NEXT_REGISTRY_ID: AtomicU64 = AtomicU64::new(1);
+
+/// A nonzero namespace unique to one registry in this process.
+///
+/// This is not a persistent or authenticated external identity. Process restart
+/// starts a new identity domain; no OS process or security authority is implied.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct SessionId(NonZeroU64);
+pub struct RegistryId(NonZeroU64);
 
-impl SessionId {
-    /// Nonzero ID value; not an OS process identifier.
+impl RegistryId {
+    /// The process-local registry namespace value.
     pub const fn get(self) -> u64 {
         self.0.get()
+    }
+
+    fn allocate_from(next: &AtomicU64) -> Result<Self, RegistryError> {
+        let id = next
+            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |current| {
+                NonZeroU64::new(current).map(|id| id.get().checked_add(1).unwrap_or(0))
+            })
+            .map_err(|_| RegistryError::IdExhausted)?;
+        NonZeroU64::new(id)
+            .map(Self)
+            .ok_or(RegistryError::IdExhausted)
+    }
+}
+
+/// A registry namespace and a nonzero local session number, never reused.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct SessionId {
+    registry: RegistryId,
+    local: NonZeroU64,
+}
+
+impl SessionId {
+    /// Nonzero registry-local number; not a complete ID or OS process identifier.
+    pub const fn get(self) -> u64 {
+        self.local.get()
+    }
+
+    /// The namespace that must accompany the local number for comparison.
+    pub const fn registry_id(self) -> RegistryId {
+        self.registry
     }
 }
 
 /// Agent identity allocated by the same registry.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct AgentId(NonZeroU64);
+pub struct AgentId {
+    registry: RegistryId,
+    local: NonZeroU64,
+}
 
 impl AgentId {
-    /// Nonzero ID value; not an external model/provider ID.
+    /// Nonzero registry-local number; not a complete ID or model/provider ID.
     pub const fn get(self) -> u64 {
-        self.0.get()
+        self.local.get()
+    }
+
+    /// The registry namespace to which this agent belongs.
+    pub const fn registry_id(self) -> RegistryId {
+        self.registry
     }
 }
 
@@ -37,6 +81,14 @@ impl AgentId {
 pub struct SessionGeneration(NonZeroU64);
 
 impl SessionGeneration {
+    /// Constructs a nonzero generation value without granting session authority.
+    pub const fn new(value: u64) -> Option<Self> {
+        match NonZeroU64::new(value) {
+            Some(value) => Some(Self(value)),
+            None => None,
+        }
+    }
+
     /// Nonzero generation.
     pub const fn get(self) -> u64 {
         self.0.get()
@@ -137,10 +189,12 @@ impl Error for RegistryError {}
 
 /// In-memory registry. No persistence or external process ownership is implied.
 ///
-/// IDs are monotonic; removal never makes an ID reusable. The registry must be
-/// shared by all callers that need one namespace.
+/// Local numbers are monotonic and full identities include a fresh process-local
+/// registry namespace. Removal or dropping a registry never recycles an identity
+/// in this process. Callers sharing a session still use the same registry.
 #[derive(Debug)]
 pub struct SessionRegistry {
+    registry_id: RegistryId,
     next_session: Option<NonZeroU64>,
     next_agent: Option<NonZeroU64>,
     agents: BTreeSet<AgentId>,
@@ -155,20 +209,38 @@ impl Default for SessionRegistry {
 }
 
 impl SessionRegistry {
-    /// Creates an empty registry.
+    /// Creates an empty registry with a fresh process-local namespace.
+    ///
+    /// # Panics
+    /// Panics if the process-local namespace allocator is exhausted. Use
+    /// [`Self::try_new`] to handle this bounded failure explicitly.
     pub fn new() -> Self {
-        Self {
+        Self::try_new().expect("process-local registry namespace space exhausted")
+    }
+
+    /// Creates an empty registry, refusing namespace exhaustion without reuse.
+    pub fn try_new() -> Result<Self, RegistryError> {
+        Ok(Self {
+            registry_id: RegistryId::allocate_from(&NEXT_REGISTRY_ID)?,
             next_session: NonZeroU64::new(1),
             next_agent: NonZeroU64::new(1),
             agents: BTreeSet::new(),
             sessions: BTreeMap::new(),
             selected: None,
-        }
+        })
+    }
+
+    /// This registry's process-local namespace; not OS or caller authentication.
+    pub const fn registry_id(&self) -> RegistryId {
+        self.registry_id
     }
 
     /// Registers an agent-scoped identity, without starting an AI provider.
     pub fn register_agent(&mut self) -> Result<AgentId, RegistryError> {
-        let id = Self::allocate(&mut self.next_agent).map(AgentId)?;
+        let id = AgentId {
+            registry: self.registry_id,
+            local: Self::allocate(&mut self.next_agent)?,
+        };
         self.agents.insert(id);
         Ok(id)
     }
@@ -186,7 +258,10 @@ impl SessionRegistry {
         if title.trim().is_empty() || title.len() > 256 {
             return Err(RegistryError::InvalidTitle);
         }
-        let id = Self::allocate(&mut self.next_session).map(SessionId)?;
+        let id = SessionId {
+            registry: self.registry_id,
+            local: Self::allocate(&mut self.next_session)?,
+        };
         let generation = SessionGeneration(NonZeroU64::new(1).expect("one is nonzero"));
         let old = self.sessions.insert(
             id,
@@ -404,14 +479,19 @@ mod tests {
 
     #[test]
     fn foreign_registry_agent_must_not_be_assumed_globally_unique() {
-        // Numeric IDs are registry-local: same raw value in another registry
-        // is not global identity. Callers must never mix registries.
+        // Raw numbers remain registry-local for compatibility. The full typed
+        // identity also includes the registry namespace and cannot alias.
         let mut a = SessionRegistry::new();
         let mut b = SessionRegistry::new();
         assert_eq!(
             a.register_agent().unwrap().get(),
             b.register_agent().unwrap().get()
         );
+        let a_id = a.register_agent().unwrap();
+        let b_id = b.register_agent().unwrap();
+        assert_eq!(a_id.get(), b_id.get());
+        assert_ne!(a_id, b_id);
+        assert_ne!(a_id.registry_id(), b_id.registry_id());
     }
 
     #[test]
@@ -629,7 +709,10 @@ mod tests {
     fn unknown_agent_does_not_create_sessions_or_consume_ids() {
         let mut r = SessionRegistry::new();
         let agent = r.register_agent().unwrap();
-        let unknown = AgentId(NonZeroU64::new(2).unwrap());
+        let unknown = AgentId {
+            registry: r.registry_id(),
+            local: NonZeroU64::new(2).unwrap(),
+        };
         assert_eq!(
             r.create_session(unknown, "Unknown owner"),
             Err(RegistryError::UnknownAgent)
@@ -652,5 +735,98 @@ mod tests {
         assert_eq!(second.get(), 2);
         assert_eq!(r.get_session(second).unwrap().agent(), agent);
         assert_eq!(r.selected_session(), Some(first));
+    }
+
+    #[test]
+    fn foreign_registry_handles_cannot_alias_equal_local_session_numbers() {
+        let mut a = SessionRegistry::new();
+        let mut b = SessionRegistry::new();
+        let owner_a = a.register_agent().unwrap();
+        let owner_b = b.register_agent().unwrap();
+        let session_a = a.create_session(owner_a, "A").unwrap();
+        let session_b = b.create_session(owner_b, "B").unwrap();
+        let handle_a = a.get_session(session_a).unwrap().handle();
+        let handle_b = b.get_session(session_b).unwrap().handle();
+        b.select_owned_session(handle_b, owner_b).unwrap();
+        let before = b.list_sessions().cloned().collect::<Vec<_>>();
+
+        assert_eq!(owner_a.get(), owner_b.get());
+        assert_eq!(session_a.get(), session_b.get());
+        assert_ne!(owner_a, owner_b);
+        assert_ne!(session_a, session_b);
+        assert_ne!(a.registry_id(), b.registry_id());
+        assert_eq!(session_a.registry_id(), a.registry_id());
+        assert_eq!(owner_b.registry_id(), b.registry_id());
+        assert_eq!(
+            b.create_session(owner_a, "Foreign registry agent"),
+            Err(RegistryError::UnknownAgent)
+        );
+        assert_eq!(
+            b.get_by_handle(handle_a),
+            Err(RegistryError::UnknownSession)
+        );
+        assert_eq!(
+            b.get_owned_session(handle_b, owner_a),
+            Err(RegistryError::ForeignSession)
+        );
+        assert_eq!(
+            b.select_owned_session(handle_a, owner_a),
+            Err(RegistryError::UnknownSession)
+        );
+        assert_eq!(
+            b.close_owned_session(handle_a, owner_a),
+            Err(RegistryError::UnknownSession)
+        );
+        assert_eq!(b.list_sessions().cloned().collect::<Vec<_>>(), before);
+        assert_eq!(b.selected_session(), Some(session_b));
+        assert_eq!(b.get_owned_session(handle_b, owner_b).unwrap().title(), "B");
+        assert_eq!(a.get_owned_session(handle_a, owner_a).unwrap().title(), "A");
+    }
+
+    #[test]
+    fn dropped_registry_namespace_is_not_reused_in_this_process() {
+        let first = SessionRegistry::try_new().unwrap().registry_id();
+        let next = SessionRegistry::try_new().unwrap().registry_id();
+        assert_ne!(first, next);
+        assert!(next.get() > first.get());
+    }
+
+    #[test]
+    fn registry_namespace_exhaustion_allocates_max_once_then_refuses() {
+        // A separate allocator fixture never exhausts or resets the real global
+        // process namespace used by the other tests or callers.
+        let allocator = AtomicU64::new(u64::MAX);
+        assert_eq!(
+            RegistryId::allocate_from(&allocator).unwrap().get(),
+            u64::MAX
+        );
+        assert_eq!(allocator.load(Ordering::Relaxed), 0);
+        assert_eq!(
+            RegistryId::allocate_from(&allocator),
+            Err(RegistryError::IdExhausted)
+        );
+        assert_eq!(
+            RegistryId::allocate_from(&allocator),
+            Err(RegistryError::IdExhausted)
+        );
+        assert_eq!(allocator.load(Ordering::Relaxed), 0);
+    }
+
+    #[test]
+    fn public_generation_constructor_is_checked_and_grants_no_authority() {
+        assert_eq!(SessionGeneration::new(0), None);
+        assert_eq!(SessionGeneration::new(1).unwrap().get(), 1);
+        assert_eq!(SessionGeneration::new(u64::MAX).unwrap().get(), u64::MAX);
+        let mut registry = SessionRegistry::new();
+        let owner = registry.register_agent().unwrap();
+        let id = registry.create_session(owner, "Current").unwrap();
+        let stale = SessionHandle {
+            id,
+            generation: SessionGeneration::new(2).unwrap(),
+        };
+        assert_eq!(
+            registry.get_by_handle(stale),
+            Err(RegistryError::StaleGeneration)
+        );
     }
 }
