@@ -24,6 +24,7 @@ use windows_sys::Win32::{
     Security::{Authorization::*, *},
     Storage::FileSystem::*,
     System::{
+        Com::CoCreateGuid,
         JobObjects::*,
         Pipes::*,
         StationsAndDesktops::*,
@@ -246,7 +247,11 @@ pub fn current_token_facts() -> Result<TokenFacts> {
     let token = Handle::new(token, "query-token")?;
     inspect_token(token.0)
 }
+#[cfg(test)]
 fn restricted_token() -> Result<Handle> {
+    restricted_token_for_desktop(None)
+}
+fn restricted_token_for_desktop(marker: Option<&str>) -> Result<Handle> {
     let source = own_token()?;
     let admin = sid(WinBuiltinAdministratorsSid)?;
     let disabled = SID_AND_ATTRIBUTES {
@@ -256,28 +261,115 @@ fn restricted_token() -> Result<Handle> {
     let restricted = sid(WinRestrictedCodeSid)?;
     let world = sid(WinWorldSid)?;
     let users = sid(WinBuiltinUsersSid)?;
-    let restricting = [&restricted, &world, &users].map(|s| SID_AND_ATTRIBUTES {
-        Sid: s.as_ptr().cast_mut().cast(),
-        Attributes: 0,
-    });
+    let mut restricting: Vec<_> = [&restricted, &world, &users]
+        .map(|s| SID_AND_ATTRIBUTES {
+            Sid: s.as_ptr().cast_mut().cast(),
+            Attributes: 0,
+        })
+        .into();
+    let mut marker_sid = null_mut();
+    if let Some(marker) = marker {
+        unsafe {
+            check(
+                ConvertStringSidToSidW(wide(marker).as_ptr(), &mut marker_sid),
+                "desktop-marker-sid",
+            )?;
+        }
+        restricting.push(SID_AND_ATTRIBUTES {
+            Sid: marker_sid,
+            Attributes: 0,
+        });
+    }
     let mut token = null_mut();
+    let created = unsafe {
+        CreateRestrictedToken(
+            source.0,
+            DISABLE_MAX_PRIVILEGE,
+            1,
+            &disabled,
+            0,
+            null(),
+            restricting.len() as u32,
+            restricting.as_ptr(),
+            &mut token,
+        )
+    };
+    let create_error = if created == 0 {
+        Some(fail("create-restricted-token"))
+    } else {
+        None
+    };
     unsafe {
-        check(
-            CreateRestrictedToken(
-                source.0,
-                DISABLE_MAX_PRIVILEGE,
-                1,
-                &disabled,
-                0,
-                null(),
-                restricting.len() as u32,
-                restricting.as_ptr(),
-                &mut token,
-            ),
-            "create-restricted-token",
-        )?;
+        if !marker_sid.is_null() {
+            LocalFree(marker_sid);
+        }
+    }
+    if let Some(error) = create_error {
+        return Err(error);
     }
     let token = Handle::new(token, "restricted-token")?;
+    if let Some(marker) = marker {
+        // Only this new token's default for future owned objects is changed.
+        // Existing host objects and the source token keep their original ACLs.
+        let data = token_buffer(token.0, TokenDefaultDacl)?;
+        let original = unsafe { &*(data.as_ptr().cast::<TOKEN_DEFAULT_DACL>()) };
+        if original.DefaultDacl.is_null() {
+            return Err(Error {
+                operation: "source-default-dacl-null",
+                win32: 0,
+            });
+        }
+        let mut marker_sid = null_mut();
+        unsafe {
+            check(
+                ConvertStringSidToSidW(wide(marker).as_ptr(), &mut marker_sid),
+                "default-dacl-marker",
+            )?;
+        }
+        let entry = EXPLICIT_ACCESS_W {
+            grfAccessPermissions: GENERIC_ALL,
+            grfAccessMode: GRANT_ACCESS,
+            grfInheritance: NO_INHERITANCE,
+            Trustee: TRUSTEE_W {
+                pMultipleTrustee: null_mut(),
+                MultipleTrusteeOperation: NO_MULTIPLE_TRUSTEE,
+                TrusteeForm: TRUSTEE_IS_SID,
+                TrusteeType: TRUSTEE_IS_UNKNOWN,
+                ptstrName: marker_sid.cast(),
+            },
+        };
+        let mut acl = null_mut();
+        let status = unsafe { SetEntriesInAclW(1, &entry, original.DefaultDacl, &mut acl) };
+        unsafe {
+            LocalFree(marker_sid);
+        }
+        if status != ERROR_SUCCESS {
+            return Err(Error {
+                operation: "default-dacl-owned-objects",
+                win32: status,
+            });
+        }
+        let default = TOKEN_DEFAULT_DACL { DefaultDacl: acl };
+        let status = unsafe {
+            SetTokenInformation(
+                token.0,
+                TokenDefaultDacl,
+                (&default as *const TOKEN_DEFAULT_DACL).cast(),
+                size_of_val(&default) as u32,
+            )
+        };
+        let error = if status == 0 {
+            Some(fail("set-private-token-default-dacl"))
+        } else {
+            None
+        };
+        unsafe {
+            LocalFree(acl.cast());
+        }
+        if let Some(error) = error {
+            return Err(error);
+        }
+    }
     let low = sid(WinLowLabelSid)?;
     let label = TOKEN_MANDATORY_LABEL {
         Label: SID_AND_ATTRIBUTES {
@@ -428,106 +520,263 @@ impl PinnedImage {
     }
 }
 static STATION_LOCK: Mutex<()> = Mutex::new(());
+fn object_name(object: HANDLE) -> Result<String> {
+    let mut bytes = 0;
+    unsafe {
+        GetUserObjectInformationW(object, UOI_NAME, null_mut(), 0, &mut bytes);
+    }
+    if bytes == 0 {
+        return Err(fail("user-object-name-size"));
+    }
+    let mut name = vec![0u16; (bytes as usize).div_ceil(2)];
+    unsafe {
+        check(
+            GetUserObjectInformationW(
+                object,
+                UOI_NAME,
+                name.as_mut_ptr().cast(),
+                bytes,
+                &mut bytes,
+            ),
+            "user-object-name",
+        )?;
+    }
+    let length = name.iter().position(|c| *c == 0).unwrap_or(name.len());
+    Ok(String::from_utf16_lossy(&name[..length]))
+}
+fn object_security(object: HANDLE, info: u32) -> Result<Vec<usize>> {
+    let mut bytes = 0;
+    unsafe {
+        GetUserObjectSecurity(object, &info, null_mut(), 0, &mut bytes);
+    }
+    if bytes == 0 {
+        return Err(fail("user-object-security-size"));
+    }
+    let mut data = vec![0usize; (bytes as usize).div_ceil(size_of::<usize>())];
+    unsafe {
+        check(
+            GetUserObjectSecurity(object, &info, data.as_mut_ptr().cast(), bytes, &mut bytes),
+            "user-object-security",
+        )?;
+    }
+    Ok(data)
+}
+fn security_text(sd: PSECURITY_DESCRIPTOR, info: u32) -> Result<String> {
+    let mut text = null_mut();
+    let mut len = 0;
+    unsafe {
+        check(
+            ConvertSecurityDescriptorToStringSecurityDescriptorW(sd, 1, info, &mut text, &mut len),
+            "security-readback-string",
+        )?;
+    }
+    let units = unsafe { std::slice::from_raw_parts(text, len as usize) };
+    let value = String::from_utf16_lossy(
+        &units[..units.iter().position(|c| *c == 0).unwrap_or(units.len())],
+    );
+    unsafe {
+        LocalFree(text.cast());
+    }
+    Ok(value)
+}
+fn desktop_input(object: HDESK) -> Result<bool> {
+    let mut input = 0i32;
+    unsafe {
+        check(
+            GetUserObjectInformationW(
+                object,
+                UOI_IO,
+                (&mut input as *mut i32).cast(),
+                size_of_val(&input) as u32,
+                null_mut(),
+            ),
+            "private-desktop-input-state",
+        )?;
+    }
+    Ok(input != 0)
+}
+fn desktop_identity() -> Result<(String, String)> {
+    let mut id = windows_sys::core::GUID::from_u128(0);
+    let status = unsafe { CoCreateGuid(&mut id) };
+    if status < 0 {
+        return Err(Error {
+            operation: "desktop-random-identity",
+            win32: status as u32,
+        });
+    }
+    let tail = u64::from_be_bytes(id.data4);
+    let name = format!(
+        "mss-probe-{:08x}{:04x}{:04x}{tail:016x}",
+        id.data1, id.data2, id.data3
+    );
+    let status = unsafe { CoCreateGuid(&mut id) };
+    if status < 0 {
+        return Err(Error {
+            operation: "desktop-random-marker",
+            win32: status as u32,
+        });
+    }
+    let tail = u64::from_be_bytes(id.data4);
+    Ok((
+        name,
+        format!(
+            "S-1-5-21-{}-{}-{}-{}",
+            id.data1,
+            ((id.data2 as u32) << 16) | id.data3 as u32,
+            (tail >> 32) as u32,
+            tail as u32
+        ),
+    ))
+}
 struct Desktop {
-    station: HWINSTA,
     desktop: HDESK,
     name: Vec<u16>,
+    marker: String,
+    parent_desktop: usize,
+    parent_thread: u32,
+    station: usize,
+    station_security: Vec<usize>,
 }
+// The creating helper exits before the handle is transferred. No thread is
+// switched to this desktop, and only this owner closes its handle.
+unsafe impl Send for Desktop {}
 impl Desktop {
     fn create() -> Result<Self> {
-        let _lock = STATION_LOCK.lock().unwrap();
-        let descriptor = Descriptor::new(&format!(
-            "D:P(A;;GA;;;{})(A;;GA;;;RC)S:(ML;;NW;;;LW)",
-            own_sid()?
-        ))?;
-        let attrs = descriptor.attributes();
-        let previous = unsafe { GetProcessWindowStation() };
-        if previous.is_null() {
-            return Err(fail("original-window-station"));
+        let (name, marker) = desktop_identity()?;
+        Self::create_named(name, marker)
+    }
+    fn create_named(name: String, marker: String) -> Result<Self> {
+        let _lock = STATION_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let station = unsafe { GetProcessWindowStation() };
+        let parent = unsafe { GetThreadDesktop(GetCurrentThreadId()) };
+        if station.is_null() || parent.is_null() {
+            return Err(fail("parent-gui-context"));
         }
-        // Nonadministrators may not supply a name. CWF_CREATE_ONLY (winuser.h)
-        // forbids opening/reconfiguring an already existing, unowned station.
-        let station = unsafe { CreateWindowStationW(null(), 1, GENERIC_ALL, &attrs) };
-        if station.is_null() {
-            return Err(fail("create-private-window-station"));
-        }
-        if unsafe { SetProcessWindowStation(station) } == 0 {
-            let error = fail("select-private-window-station");
-            unsafe {
-                if SetProcessWindowStation(previous) != 0 {
-                    CloseWindowStation(station);
+        let info = OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION;
+        let station_security = object_security(station, info)?;
+        let station_name = object_name(station)?;
+        let full_name = wide(format!("{station_name}\\{name}"));
+        let desktop_name = name.clone();
+        let desktop_marker = marker.clone();
+        let helper = thread::spawn(move || -> Result<(usize, String)> {
+            // CreateDesktop opens an existing object on collision. Refuse that
+            // path before creation, then independently verify the nonce DACL to
+            // catch a race; never reconfigure an existing object's security.
+            let existing = unsafe { OpenDesktopW(wide(&name).as_ptr(), 0, 0, READ_CONTROL) };
+            if !existing.is_null() {
+                unsafe {
+                    CloseDesktop(existing);
                 }
+                return Err(Error {
+                    operation: "private-desktop-collision",
+                    win32: ERROR_ALREADY_EXISTS,
+                });
             }
-            return Err(error);
+            if unsafe { GetLastError() } != ERROR_FILE_NOT_FOUND {
+                return Err(fail("private-desktop-collision-check"));
+            }
+            // CreateProcessAsUser requires full access to its specified desktop.
+            // This grant is limited to this fresh object and nonce restricting
+            // SID; Win32k lockdown is independently checked before Resume.
+            let descriptor = Descriptor::new(&format!(
+                "O:{}D:P(A;;0xf01ff;;;{})(A;;0xf01ff;;;{})S:AI(ML;;NW;;;LW)",
+                own_sid()?,
+                own_sid()?,
+                marker
+            ))?;
+            let expected = security_text(descriptor.0, info | LABEL_SECURITY_INFORMATION)?;
+            let attrs = descriptor.attributes();
+            let desktop = unsafe {
+                CreateDesktopW(wide(&name).as_ptr(), null(), null(), 0, GENERIC_ALL, &attrs)
+            };
+            if desktop.is_null() {
+                return Err(fail("create-private-desktop"));
+            }
+            // Do not close on this thread: CreateDesktop assigns the object to
+            // its creator. Join first so even a failed readback can close it.
+            Ok((desktop as usize, expected))
+        });
+        let (desktop, expected) = helper.join().map_err(|_| Error {
+            operation: "private-desktop-helper",
+            win32: 0,
+        })??;
+        let result = Desktop {
+            desktop: desktop as HDESK,
+            name: full_name,
+            marker: desktop_marker,
+            parent_desktop: parent as usize,
+            parent_thread: unsafe { GetCurrentThreadId() },
+            station: station as usize,
+            station_security,
+        };
+        let security = object_security(result.desktop, info | LABEL_SECURITY_INFORMATION)?;
+        let actual = security_text(
+            security.as_ptr().cast_mut().cast(),
+            info | LABEL_SECURITY_INFORMATION,
+        )?;
+        if expected != actual {
+            return Err(Error {
+                operation: "private-desktop-security",
+                win32: 0,
+            });
         }
-        let mut name_bytes = 0;
-        unsafe {
-            GetUserObjectInformationW(station, UOI_NAME, null_mut(), 0, &mut name_bytes);
+        if object_name(result.desktop)? != desktop_name || desktop_input(result.desktop)? {
+            return Err(Error {
+                operation: "private-desktop-identity-or-input",
+                win32: 0,
+            });
         }
-        let mut station_name = vec![0u16; (name_bytes as usize).div_ceil(2)];
-        if name_bytes == 0
-            || unsafe {
-                GetUserObjectInformationW(
-                    station,
-                    UOI_NAME,
-                    station_name.as_mut_ptr().cast(),
-                    name_bytes,
-                    &mut name_bytes,
-                )
-            } == 0
+        result.verify_parent()?;
+        Ok(result)
+    }
+    fn verify_parent(&self) -> Result<()> {
+        if unsafe { GetProcessWindowStation() } as usize != self.station
+            || unsafe { GetThreadDesktop(self.parent_thread) } as usize != self.parent_desktop
+            || object_security(
+                self.station as HANDLE,
+                OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION,
+            )? != self.station_security
+            || desktop_input(self.desktop)?
         {
-            let error = fail("private-station-name");
+            return Err(Error {
+                operation: "parent-context-changed-or-desktop-interactive",
+                win32: 0,
+            });
+        }
+        Ok(())
+    }
+    fn close_checked(&mut self) -> Result<()> {
+        let name = object_name(self.desktop)?;
+        unsafe {
+            check(CloseDesktop(self.desktop), "close-own-private-desktop")?;
+        }
+        self.desktop = null_mut();
+        let reopened = unsafe { OpenDesktopW(wide(name).as_ptr(), 0, 0, READ_CONTROL) };
+        let error = unsafe { GetLastError() };
+        if !reopened.is_null() {
             unsafe {
-                if SetProcessWindowStation(previous) == 0 {
-                    return Err(fail("restore-station-owned-resources-quarantined"));
-                }
-                CloseWindowStation(station);
+                CloseDesktop(reopened);
             }
-            return Err(error);
+            return Err(Error {
+                operation: "private-desktop-cleanup-unconfirmed",
+                win32: 0,
+            });
         }
-        let name = String::from_utf16_lossy(
-            &station_name[..station_name
-                .iter()
-                .position(|c| *c == 0)
-                .unwrap_or(station_name.len())],
-        );
-        let desktop = unsafe {
-            CreateDesktopW(
-                wide("probe").as_ptr(),
-                null(),
-                null(),
-                0,
-                GENERIC_ALL,
-                &attrs,
-            )
-        };
-        let create_error = if desktop.is_null() {
-            Some(fail("create-private-desktop"))
-        } else {
-            None
-        };
-        let restored = unsafe { SetProcessWindowStation(previous) };
-        if restored == 0 {
-            return Err(fail("restore-station-owned-resources-quarantined"));
+        if error != ERROR_FILE_NOT_FOUND {
+            return Err(Error {
+                operation: "private-desktop-cleanup-observation",
+                win32: error,
+            });
         }
-        if let Some(error) = create_error {
-            unsafe {
-                CloseWindowStation(station);
-            }
-            return Err(error);
-        }
-        Ok(Self {
-            station,
-            desktop,
-            name: wide(format!("{name}\\probe")),
-        })
+        Ok(())
     }
 }
 impl Drop for Desktop {
     fn drop(&mut self) {
-        unsafe {
-            CloseDesktop(self.desktop);
-            CloseWindowStation(self.station);
+        if !self.desktop.is_null() {
+            unsafe {
+                CloseDesktop(self.desktop);
+            }
         }
     }
 }
@@ -669,6 +918,14 @@ pub struct Observation {
     pub token: TokenFacts,
     pub pid: u32,
     pub birth: u64,
+    pub desktop: String,
+    pub desktop_receives_input: bool,
+    pub parent_desktop_unchanged: bool,
+    pub station_acl_unchanged: bool,
+    /// None is an unavailable observation, never proof of no GUI connection.
+    pub child_connected_desktop: Option<String>,
+    pub child_desktop_query_win32: Option<u32>,
+    pub desktop_cleanup_confirmed: bool,
 }
 pub struct Run {
     job: Handle,
@@ -680,6 +937,8 @@ pub struct Run {
     pub pid: u32,
     pub birth: u64,
     token: TokenFacts,
+    child_connected_desktop: Option<String>,
+    child_desktop_query_win32: Option<u32>,
 }
 unsafe impl Send for Run {}
 fn active(job: HANDLE) -> Result<u32> {
@@ -697,6 +956,37 @@ fn active(job: HANDLE) -> Result<u32> {
         )?;
     }
     Ok(info.ActiveProcesses)
+}
+fn has_descendants(job: HANDLE, primary: u32) -> Result<bool> {
+    // A signalled primary can remain in Job accounting briefly. Distinguish
+    // that case from a live descendant without granting a cleanup grace period
+    // to descendants or confusing primary exit with whole-tree termination.
+    let mut data = [0usize; 6]; // header + the enforced four-process maximum
+    let list = data.as_mut_ptr().cast::<JOBOBJECT_BASIC_PROCESS_ID_LIST>();
+    unsafe {
+        check(
+            QueryInformationJobObject(
+                job,
+                JobObjectBasicProcessIdList,
+                list.cast(),
+                size_of_val(&data) as u32,
+                null_mut(),
+            ),
+            "job-process-identities",
+        )?;
+        let count = (*list).NumberOfProcessIdsInList as usize;
+        if count > 4 {
+            return Err(Error {
+                operation: "job-process-list-overflow",
+                win32: 0,
+            });
+        }
+        Ok(
+            std::slice::from_raw_parts((*list).ProcessIdList.as_ptr(), count)
+                .iter()
+                .any(|pid| *pid != primary as usize),
+        )
+    }
 }
 fn create_job() -> Result<Handle> {
     let job = Handle::new(unsafe { CreateJobObjectW(null(), null()) }, "create-job")?;
@@ -751,8 +1041,49 @@ impl Run {
                 win32: 0,
             });
         }
-        let token = restricted_token()?;
         let desktop = Desktop::create()?;
+        let token = restricted_token_for_desktop(Some(&desktop.marker))?;
+        let token_value = token.0 as usize;
+        let station_name = object_name(desktop.station as HANDLE)?;
+        let desktop_name = object_name(desktop.desktop)?;
+        thread::spawn(move || -> Result<()> {
+            unsafe {
+                check(
+                    ImpersonateLoggedOnUser(token_value as HANDLE),
+                    "preflight-impersonate-owned-token",
+                )?;
+            }
+            struct Revert;
+            impl Drop for Revert {
+                fn drop(&mut self) {
+                    if unsafe { RevertToSelf() } == 0 {
+                        std::process::abort();
+                    }
+                }
+            }
+            let _revert = Revert;
+            let station =
+                unsafe { OpenWindowStationW(wide(station_name).as_ptr(), 0, GENERIC_ALL) };
+            if station.is_null() {
+                return Err(fail("restricted-open-unchanged-station"));
+            }
+            unsafe {
+                CloseWindowStation(station);
+            }
+            let desk = unsafe { OpenDesktopW(wide(desktop_name).as_ptr(), 0, 0, GENERIC_ALL) };
+            if desk.is_null() {
+                return Err(fail("restricted-open-own-desktop"));
+            }
+            unsafe {
+                CloseDesktop(desk);
+            }
+            Ok(())
+        })
+        .join()
+        .map_err(|_| Error {
+            operation: "desktop-access-preflight-helper",
+            win32: 0,
+        })??;
         let job = create_job()?;
         let (stdout_read, stdout_write) = pipe()?;
         let (stderr_read, stderr_write) = pipe()?;
@@ -822,7 +1153,7 @@ impl Run {
                     CREATE_SUSPENDED
                         | CREATE_UNICODE_ENVIRONMENT
                         | EXTENDED_STARTUPINFO_PRESENT
-                        | CREATE_NO_WINDOW,
+                        | DETACHED_PROCESS,
                     env.as_ptr().cast(),
                     wide(cwd).as_ptr(),
                     &startup.StartupInfo,
@@ -882,6 +1213,33 @@ impl Run {
                 win32: 0,
             });
         }
+        // Borrowed thread-desktop handles must not be closed by this process.
+        unsafe {
+            SetLastError(ERROR_SUCCESS);
+        }
+        let actual_desktop = unsafe { GetThreadDesktop(process.dwThreadId) };
+        let child_desktop_query_win32 = if actual_desktop.is_null() {
+            Some(unsafe { GetLastError() })
+        } else {
+            None
+        };
+        let child_connected_desktop = if actual_desktop.is_null() {
+            None
+        } else {
+            let actual_name = object_name(actual_desktop)?;
+            let info =
+                OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION | LABEL_SECURITY_INFORMATION;
+            if actual_name != object_name(desktop.desktop)?
+                || desktop_input(actual_desktop)?
+                || object_security(actual_desktop, info)? != object_security(desktop.desktop, info)?
+            {
+                return Err(Error {
+                    operation: "child-desktop-mismatch-or-input",
+                    win32: 0,
+                });
+            }
+            Some(actual_name)
+        };
         let mut path_buf = vec![0u16; 32768];
         let mut len = path_buf.len() as u32;
         unsafe {
@@ -914,6 +1272,7 @@ impl Run {
                 "child-birth",
             )?;
         }
+        desktop.verify_parent()?;
         if unsafe { ResumeThread(thread_handle.0) } == u32::MAX {
             return Err(fail("resume-probe"));
         }
@@ -929,6 +1288,8 @@ impl Run {
             pid: process.dwProcessId,
             birth: ((creation.dwHighDateTime as u64) << 32) | creation.dwLowDateTime as u64,
             token: facts,
+            child_connected_desktop,
+            child_desktop_query_win32,
         })
     }
     pub fn wait(mut self, timeout: Duration, cancel: &AtomicBool) -> Result<Observation> {
@@ -949,7 +1310,7 @@ impl Run {
                 unsafe {
                     check(GetExitCodeProcess(self.process.0, &mut code), "child-exit")?;
                 }
-                end = if active(self.job.0)? > 0 {
+                end = if has_descendants(self.job.0, self.pid)? {
                     End::DescendantsRemaining
                 } else {
                     End::Exited(code)
@@ -987,6 +1348,10 @@ impl Run {
             operation: "stderr-reader",
             win32: 0,
         })?;
+        self._desktop.verify_parent()?;
+        let desktop_name =
+            String::from_utf16_lossy(&self._desktop.name[..self._desktop.name.len() - 1]);
+        self._desktop.close_checked()?;
         Ok(Observation {
             end,
             stdout,
@@ -1002,6 +1367,13 @@ impl Run {
             },
             pid: self.pid,
             birth: self.birth,
+            desktop: desktop_name,
+            desktop_receives_input: false,
+            parent_desktop_unchanged: true,
+            station_acl_unchanged: true,
+            child_connected_desktop: self.child_connected_desktop.take(),
+            child_desktop_query_win32: self.child_desktop_query_win32,
+            desktop_cleanup_confirmed: true,
         })
     }
 }
@@ -1085,6 +1457,152 @@ impl AttemptFence {
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn default_aces(token: HANDLE) -> Vec<Vec<u8>> {
+        let data = token_buffer(token, TokenDefaultDacl).unwrap();
+        let acl = unsafe { (*(data.as_ptr().cast::<TOKEN_DEFAULT_DACL>())).DefaultDacl };
+        assert!(!acl.is_null());
+        (0..unsafe { (*acl).AceCount } as u32)
+            .map(|index| {
+                let mut ace = null_mut();
+                unsafe {
+                    check(GetAce(acl, index, &mut ace), "test-default-ace").unwrap();
+                    std::slice::from_raw_parts(
+                        ace.cast::<u8>(),
+                        (*(ace.cast::<ACE_HEADER>())).AceSize as usize,
+                    )
+                    .to_vec()
+                }
+            })
+            .collect()
+    }
+
+    #[test]
+    fn nonce_default_dacl_preserves_source_and_existing_restrictions() {
+        let source = own_token().unwrap();
+        let before = default_aces(source.0);
+        let (_, marker) = desktop_identity().unwrap();
+        let token = restricted_token_for_desktop(Some(&marker)).unwrap();
+        assert!(inspect_token(token.0).unwrap().admissible());
+        assert_eq!(
+            default_aces(source.0),
+            before,
+            "source token must never be reconfigured"
+        );
+        let mut added = default_aces(token.0);
+        for ace in before {
+            let at = added
+                .iter()
+                .position(|candidate| *candidate == ace)
+                .expect("preserve every original ACE");
+            added.remove(at);
+        }
+        assert_eq!(added.len(), 1, "only the per-run nonce grant may be added");
+        // Copy to aligned storage before reading the OS ACE structure.
+        let mut ace = vec![0usize; added[0].len().div_ceil(size_of::<usize>())];
+        unsafe {
+            std::ptr::copy_nonoverlapping(
+                added[0].as_ptr(),
+                ace.as_mut_ptr().cast(),
+                added[0].len(),
+            );
+        }
+        let ace = unsafe { &*(ace.as_ptr().cast::<ACCESS_ALLOWED_ACE>()) };
+        assert_eq!(ace.Header.AceType, 0); // ACCESS_ALLOWED_ACE_TYPE
+        assert_eq!(ace.Header.AceFlags, 0);
+        assert_eq!(ace.Mask, GENERIC_ALL);
+        let mut marker_sid = null_mut();
+        unsafe {
+            check(
+                ConvertStringSidToSidW(wide(marker).as_ptr(), &mut marker_sid),
+                "test-marker-sid",
+            )
+            .unwrap();
+        }
+        let marker_sid = Descriptor(marker_sid);
+        assert_ne!(
+            unsafe {
+                EqualSid(
+                    (&ace.SidStart as *const u32).cast_mut().cast(),
+                    marker_sid.0,
+                )
+            },
+            0
+        );
+        let data = token_buffer(token.0, TokenRestrictedSids).unwrap();
+        let groups = unsafe { &*(data.as_ptr().cast::<TOKEN_GROUPS>()) };
+        let groups = unsafe {
+            std::slice::from_raw_parts(groups.Groups.as_ptr(), groups.GroupCount as usize)
+        };
+        assert_eq!(groups.len(), 4);
+        for expected in [
+            sid(WinRestrictedCodeSid).unwrap(),
+            sid(WinWorldSid).unwrap(),
+            sid(WinBuiltinUsersSid).unwrap(),
+        ] {
+            assert!(
+                groups
+                    .iter()
+                    .any(|g| unsafe { EqualSid(g.Sid, expected.as_ptr().cast_mut().cast()) != 0 })
+            );
+        }
+        assert!(
+            groups
+                .iter()
+                .any(|g| unsafe { EqualSid(g.Sid, marker_sid.0) != 0 })
+        );
+    }
+
+    #[test]
+    fn private_desktop_is_noninput_owned_and_closed_without_changing_parent() {
+        let desktop = Desktop::create().expect("create a fresh noninput desktop");
+        desktop.verify_parent().unwrap();
+        let name = object_name(desktop.desktop).unwrap();
+        assert!(name.starts_with("mss-probe-"));
+        assert!(!name.eq_ignore_ascii_case("Default"));
+        assert!(!desktop_input(desktop.desktop).unwrap());
+        let security = object_security(desktop.desktop, LABEL_SECURITY_INFORMATION).unwrap();
+        assert_eq!(
+            security_text(
+                security.as_ptr().cast_mut().cast(),
+                LABEL_SECURITY_INFORMATION
+            )
+            .unwrap(),
+            "S:AI(ML;;NW;;;LW)"
+        );
+        drop(desktop);
+        let reopened = unsafe { OpenDesktopW(wide(name).as_ptr(), 0, 0, READ_CONTROL) };
+        let error = unsafe { GetLastError() };
+        if !reopened.is_null() {
+            unsafe {
+                CloseDesktop(reopened);
+            }
+        }
+        assert!(
+            reopened.is_null(),
+            "owned desktop must disappear after its last handle closes"
+        );
+        assert_eq!(error, ERROR_FILE_NOT_FOUND);
+    }
+
+    #[test]
+    fn existing_desktop_collision_is_refused_without_acl_changes() {
+        let original = Desktop::create().unwrap();
+        let name = object_name(original.desktop).unwrap();
+        let info =
+            OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION | LABEL_SECURITY_INFORMATION;
+        let before = object_security(original.desktop, info).unwrap();
+        let (_, fresh_marker) = desktop_identity().unwrap();
+        let result = Desktop::create_named(name, fresh_marker);
+        assert!(matches!(
+            result,
+            Err(Error {
+                operation: "private-desktop-collision",
+                win32: ERROR_ALREADY_EXISTS
+            })
+        ));
+        assert_eq!(object_security(original.desktop, info).unwrap(), before);
+        original.verify_parent().unwrap();
+    }
     use std::sync::atomic::AtomicU64;
     static SERIAL: Mutex<()> = Mutex::new(());
     static SEQUENCE: AtomicU64 = AtomicU64::new(0);

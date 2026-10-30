@@ -45,6 +45,7 @@ struct Fixture {
     root: PathBuf,
     temp: PathBuf,
     image: PathBuf,
+    supervisor: PathBuf,
     hash: String,
 }
 
@@ -66,11 +67,19 @@ impl Fixture {
         fs::copy(env!("CARGO_BIN_EXE_mss-broker-probe"), &image)
             .expect("copy own compiled fixture image");
         fixture_acl(&image, true, true).expect("set owned image ACL");
+        let supervisor = root.join("supervisor.exe");
+        fs::copy(
+            env!("CARGO_BIN_EXE_mss-broker-supervisor-probe"),
+            &supervisor,
+        )
+        .expect("copy own compiled supervisor fixture image");
+        fixture_acl(&supervisor, true, true).expect("set owned supervisor image ACL");
         let hash = format!("{:x}", Sha256::digest(fs::read(&image).unwrap()));
         Self {
             root,
             temp,
             image,
+            supervisor,
             hash,
         }
     }
@@ -135,6 +144,33 @@ fn normal(observation: &Observation) {
     assert!(observation.token.admissible());
     assert_ne!(observation.pid, 0);
     assert_ne!(observation.birth, 0);
+    private_desktop(observation);
+}
+
+fn private_desktop(observation: &Observation) {
+    let (station, desktop) = observation
+        .desktop
+        .split_once('\\')
+        .expect("explicit station and private desktop must be observed");
+    assert!(!station.is_empty());
+    assert!(!desktop.is_empty());
+    assert!(
+        !desktop.eq_ignore_ascii_case("Default"),
+        "never use the user desktop"
+    );
+    assert!(!observation.desktop_receives_input);
+    assert!(observation.parent_desktop_unchanged);
+    assert!(observation.station_acl_unchanged);
+    assert!(observation.desktop_cleanup_confirmed);
+}
+
+fn child_desktop_and_mitigation(observation: &Observation, value: &Value) {
+    private_desktop(observation);
+    assert_eq!(
+        value["startup_desktop"].as_str(),
+        Some(observation.desktop.as_str())
+    );
+    assert_eq!(value["win32k_disabled"], true);
 }
 
 #[test]
@@ -146,6 +182,7 @@ fn effective_restricted_token_and_job_are_observed_in_the_child() {
     let observation = fixture.run(&["facts"]);
     normal(&observation);
     let value = report(&observation);
+    child_desktop_and_mitigation(&observation, &value);
     assert_eq!(value["in_job"], true);
     assert_eq!(value["token"]["restricted"], true);
     assert_eq!(value["token"]["low_integrity"], true);
@@ -250,8 +287,9 @@ fn synthetic_parent_secret_environment_and_profile_do_not_reach_child() {
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
     let fixture = Fixture::new();
-    let output = Command::new(&fixture.image)
+    let output = Command::new(&fixture.supervisor)
         .arg("supervise-facts")
+        .arg(&fixture.image)
         .arg(&fixture.root)
         .env_clear()
         .env("SystemRoot", std::env::var_os("SystemRoot").unwrap())
@@ -266,6 +304,16 @@ fn synthetic_parent_secret_environment_and_profile_do_not_reach_child() {
     let value: Value = serde_json::from_slice(&output.stdout).unwrap();
     assert_eq!(value["forbidden_env"], serde_json::json!([]));
     assert_eq!(value["token"]["restricted"], true);
+    assert_eq!(value["win32k_disabled"], true);
+    assert!(
+        !value["startup_desktop"]
+            .as_str()
+            .unwrap()
+            .rsplit('\\')
+            .next()
+            .unwrap()
+            .eq_ignore_ascii_case("Default")
+    );
 }
 
 #[test]
@@ -280,12 +328,14 @@ fn timeout_and_cancellation_terminate_only_owned_job() {
         .unwrap();
     assert_eq!(timeout.end, End::TimedOut);
     assert!(timeout.cleanup_confirmed);
+    private_desktop(&timeout);
     let cancelled = fixture
         .launch(&["sleep", "20000"])
         .wait(Duration::from_secs(5), &AtomicBool::new(true))
         .unwrap();
     assert_eq!(cancelled.end, End::Cancelled);
     assert!(cancelled.cleanup_confirmed);
+    private_desktop(&cancelled);
     normal(&fixture.run(&["facts"])); // A separate owned session remains usable.
 }
 
@@ -300,9 +350,87 @@ fn descendant_outlives_primary_then_job_cleanup_is_verified() {
     assert!(observation.cleanup_confirmed);
     assert!(!observation.output_incomplete);
     let child = report(&observation);
+    child_desktop_and_mitigation(&observation, &child);
     assert_eq!(child["in_job"], true);
     assert_eq!(child["token"]["restricted"], true);
     assert_eq!(child["token"]["elevated"], false);
+    assert_eq!(child["token"]["low_integrity"], true);
+    assert_eq!(child["token"]["enabled_admin"], false);
+    assert_eq!(child["token"]["unexpected_enabled_privilege"], false);
+    assert_eq!(child["forbidden_env"], serde_json::json!([]));
+}
+
+#[test]
+fn cancellation_does_not_terminate_a_simultaneous_unrelated_owned_job() {
+    let _serial = SERIAL
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let cancelled_fixture = Fixture::new();
+    let survivor_fixture = Fixture::new();
+    let cancelled_run = cancelled_fixture.launch(&["sleep", "20000"]);
+    let survivor_run = survivor_fixture.launch(&["sleep", "20000"]);
+    assert_ne!(cancelled_run.pid, survivor_run.pid);
+    let raw_survivor = unsafe {
+        OpenProcess(
+            PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZATION_SYNCHRONIZE,
+            0,
+            survivor_run.pid,
+        )
+    };
+    assert!(
+        !raw_survivor.is_null(),
+        "query only our retained Run's process"
+    );
+    let survivor_handle = ProcessHandle(raw_survivor);
+    let mut creation = FILETIME {
+        dwLowDateTime: 0,
+        dwHighDateTime: 0,
+    };
+    let mut exit = creation;
+    let mut kernel = creation;
+    let mut user = creation;
+    assert_ne!(
+        unsafe {
+            GetProcessTimes(
+                survivor_handle.0,
+                &mut creation,
+                &mut exit,
+                &mut kernel,
+                &mut user,
+            )
+        },
+        0
+    );
+    assert_eq!(
+        ((creation.dwHighDateTime as u64) << 32) | creation.dwLowDateTime as u64,
+        survivor_run.birth
+    );
+    assert_eq!(
+        unsafe { WaitForSingleObject(survivor_handle.0, 0) },
+        WAIT_TIMEOUT
+    );
+    let cancelled = cancelled_run
+        .wait(Duration::from_secs(5), &AtomicBool::new(true))
+        .unwrap();
+    assert_eq!(cancelled.end, End::Cancelled);
+    assert!(cancelled.cleanup_confirmed);
+    private_desktop(&cancelled);
+    assert_eq!(
+        unsafe { WaitForSingleObject(survivor_handle.0, 0) },
+        WAIT_TIMEOUT,
+        "a distinct owned Job must remain alive after cancellation of its peer"
+    );
+    let survivor = survivor_run
+        .wait(Duration::from_secs(5), &AtomicBool::new(true))
+        .unwrap();
+    assert_eq!(survivor.end, End::Cancelled);
+    assert!(survivor.cleanup_confirmed);
+    assert!(survivor.token.admissible());
+    private_desktop(&survivor);
+    assert_ne!(
+        cancelled.desktop, survivor.desktop,
+        "each owned Run has its own desktop"
+    );
 }
 
 #[test]
@@ -316,6 +444,7 @@ fn bounded_output_is_marked_incomplete_instead_of_accepted() {
     assert!(observation.cleanup_confirmed);
     assert!(observation.output_incomplete);
     assert_eq!(observation.stdout.len(), 65_536);
+    private_desktop(&observation);
 }
 
 #[test]
@@ -325,8 +454,9 @@ fn supervisor_loss_closes_job_and_terminates_verified_child() {
         .unwrap_or_else(|poisoned| poisoned.into_inner());
     let fixture = Fixture::new();
     let mut supervisor = OwnedSupervisor(
-        Command::new(&fixture.image)
+        Command::new(&fixture.supervisor)
             .arg("supervise-sleep")
+            .arg(&fixture.image)
             .arg(&fixture.root)
             .stdout(Stdio::piped())
             .stderr(Stdio::null())

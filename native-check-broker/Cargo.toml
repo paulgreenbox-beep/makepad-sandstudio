@@ -17,7 +17,7 @@ serde_json = "1"
 sha2 = "=0.10.9"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "=0.61.2", features = ["Win32_Foundation", "Win32_Security", "Win32_Security_Authorization", "Win32_Storage_FileSystem", "Win32_System_Threading", "Win32_System_JobObjects", "Win32_System_Pipes", "Win32_System_StationsAndDesktops", "Win32_Graphics_Gdi", "Win32_System_SystemInformation", "Win32_System_SystemServices"] }
+windows-sys = { version = "=0.61.2", features = ["Win32_Foundation", "Win32_Security", "Win32_Security_Authorization", "Win32_Storage_FileSystem", "Win32_System_Threading", "Win32_System_JobObjects", "Win32_System_Pipes", "Win32_System_StationsAndDesktops", "Win32_Graphics_Gdi", "Win32_System_SystemInformation", "Win32_System_SystemServices", "Win32_System_Com"] }
 
 [[bin]]
 name = "mss-native-check-broker"
@@ -26,4 +26,9 @@ path = "src/main.rs"
 [[bin]]
 name = "mss-broker-probe"
 path = "src/bin/probe.rs"
+required-features = ["native-probes"]
+
+[[bin]]
+name = "mss-broker-supervisor-probe"
+path = "src/bin/supervisor_probe.rs"
 required-features = ["native-probes"]
