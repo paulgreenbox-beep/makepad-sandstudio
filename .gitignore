@@ -1,0 +1,11 @@
+/target/
+/reports/
+/artifacts/
+/local/
+/.deps/
+*.log
+*.png
+*.dmp
+.env
+.env.*
+!.env.example
