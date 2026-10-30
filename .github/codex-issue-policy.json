@@ -1,0 +1,26 @@
+{
+  "schema": "mss-codex-issue-policy-v1",
+  "enabled": false,
+  "authorized_user_ids": [298129624],
+  "worker_runner_id": null,
+  "worker_name": null,
+  "worker_labels": ["self-hosted", "Windows", "X64", "mss-codex-worker"],
+  "codex_home": "C:\\ProgramData\\MSS-Codex\\codex-home",
+  "managed_requirements": "C:\\ProgramData\\OpenAI\\Codex\\requirements.toml",
+  "check_broker": "C:\\ProgramData\\MSS-Codex\\check-broker.exe",
+  "isolation": {
+    "approved": false,
+    "evidence_ref": null,
+    "config_sha256": null,
+    "requirements_sha256": null,
+    "broker_sha256": null
+  },
+  "allowed_commands": [
+    ["cargo", "metadata", "--no-deps", "--format-version", "1"],
+    ["cargo", "fmt", "--all", "--", "--check"],
+    ["cargo", "check", "--workspace", "--all-targets"],
+    ["cargo", "test", "--workspace"],
+    ["cargo", "test", "-p", "mss-core"]
+  ],
+  "scopes": {}
+}

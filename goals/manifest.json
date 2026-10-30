@@ -1,6 +1,7 @@
 {
   "schema": "mss-goal-index-v1",
   "goals": [
+    {"id": "MSS-004", "path": "goals/MSS-004.json"},
     {
       "id": "MSS-001",
       "path": "goals/MSS-001.json"

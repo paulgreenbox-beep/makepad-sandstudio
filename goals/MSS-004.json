@@ -1,0 +1,20 @@
+{
+  "schema": "mss-goal-v1",
+  "id": "MSS-004",
+  "title": "Prepare a fail-closed GitHub Issue to Codex dispatcher",
+  "module_ids": ["mss.skills"],
+  "status": "IN_REVIEW",
+  "branch": "codex/github-issue-dispatcher",
+  "pr_url": "https://github.com/paulgreenbox-beep/makepad-sandstudio/pull/7",
+  "owner_agent": "codex-integration",
+  "source_commit": "c4358db8782860f7341fd7dabf898c45364e052c",
+  "dependencies": [],
+  "acceptance": [
+    "Trusted label sender authorization, replay fencing and validated existing GOAL routing",
+    "Only physical self-hosted Windows runners and independently approved native restrictions",
+    "Draft PR publication and source-bound evidence without automatic merge or VERIFIED",
+    "Model-free regression tests and a clear disabled-by-default setup guide"
+  ],
+  "required_checks": [{"id": "CODEX_DISPATCH_TESTS", "status": "PASS", "evidence_ref": "goals/events/MSS-004-20261030121543-CODEX_DISPATCH_TESTS.json"}],
+  "notes": "Direct owner task; Draft PR #7 is stacked on PR #5. Implementation checks passed at source_commit; this later commit records receipts/status only. Live integration is BLOCKED: no registered runners or Actions Secrets; native broker is not supplied or qualified. No real model execution/API spend authorized or performed. Native isolation, live dispatch and Toolkit parity remain NOT_VERIFIED."
+}

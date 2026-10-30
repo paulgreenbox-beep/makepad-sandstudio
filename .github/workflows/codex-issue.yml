@@ -1,0 +1,139 @@
+name: MSS Codex Issue worker
+on:
+  issues:
+    types: [labeled]
+permissions: {}
+concurrency:
+  group: mss-codex-issue-${{ github.event.issue.number }}
+  cancel-in-progress: false
+jobs:
+  prepare:
+    if: github.event.label.name == 'codex-ready'
+    runs-on: [self-hosted, Windows, X64, mss-codex-control]
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      issues: write
+    outputs:
+      ready: ${{ steps.route.outputs.ready }}
+      progress_sha: ${{ steps.route.outputs.progress_sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          path: trusted
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Authorize, validate GOAL and claim once
+        id: route
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUNNER_READ_TOKEN: ${{ secrets.MSS_RUNNER_READ_TOKEN }}
+          MSS_KEY_PRESENT: ${{ secrets.OPENAI_API_KEY != '' }}
+          MSS_CODEX_ENABLE: ${{ vars.MSS_CODEX_ENABLE }}
+          MSS_OUT: ${{ runner.temp }}/mss-plan-${{ github.run_id }}
+        run: node trusted/scripts/codex-issue/run.mjs prepare
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: steps.route.outputs.ready == 'true'
+        with:
+          name: mss-plan-${{ github.run_id }}
+          path: ${{ runner.temp }}/mss-plan-${{ github.run_id }}/plan.json
+          retention-days: 7
+          if-no-files-found: error
+  implement:
+    needs: prepare
+    if: needs.prepare.outputs.ready == 'true' && github.run_attempt == 1
+    runs-on: [self-hosted, Windows, X64, mss-codex-worker]
+    environment: mss-codex-owner-approved
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      issues: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          path: trusted
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ needs.prepare.outputs.progress_sha }}
+          path: work
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: mss-plan-${{ github.run_id }}
+          path: ${{ runner.temp }}/mss-plan-${{ github.run_id }}
+      - name: Verify native host pins and prepare data-only task
+        id: host
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MSS_WORK: ${{ github.workspace }}/work
+          MSS_OUT: ${{ runner.temp }}/mss-plan-${{ github.run_id }}
+        run: node trusted/scripts/codex-issue/run.mjs worker-prepare
+      - name: Generate bounded source changes
+        id: codex
+        continue-on-error: true
+        uses: openai/codex-action@c05cfd74ad95c626cdf05c6685e62becc3bf7813
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          codex-version: '0.166.0'
+          codex-home: C:\ProgramData\MSS-Codex\codex-home
+          working-directory: ${{ github.workspace }}/work
+          prompt-file: ${{ runner.temp }}/mss-plan-${{ github.run_id }}/prompt.txt
+          permission-profile: mss-issue
+          # Only omits UNIX privilege drop. Independently verified native
+          # elevated-only restrictions are mandatory; never unrestricted fallback.
+          safety-strategy: unsafe
+      - name: Collect changes and invoke pinned native check broker
+        if: always() && steps.host.outcome == 'success'
+        shell: pwsh
+        env:
+          MSS_CODEX_OUTCOME: ${{ steps.codex.outcome }}
+          MSS_WORK: ${{ github.workspace }}/work
+          MSS_OUT: ${{ runner.temp }}/mss-plan-${{ github.run_id }}
+        run: node trusted/scripts/codex-issue/run.mjs collect
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: mss-result-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/mss-plan-${{ github.run_id }}/result.json
+            ${{ runner.temp }}/mss-plan-${{ github.run_id }}/worker.bundle
+          retention-days: 7
+          if-no-files-found: ignore
+  publish:
+    needs: [prepare, implement]
+    if: always() && needs.prepare.outputs.ready == 'true' && github.run_attempt == 1
+    runs-on: [self-hosted, Windows, X64, mss-codex-control]
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          path: trusted
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: mss-plan-${{ github.run_id }}
+          path: ${{ runner.temp }}/mss-plan-${{ github.run_id }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        continue-on-error: true
+        with:
+          name: mss-result-${{ github.run_id }}
+          path: ${{ runner.temp }}/mss-plan-${{ github.run_id }}
+      - name: Validate objects and create Draft PR with receipts
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MSS_OUT: ${{ runner.temp }}/mss-plan-${{ github.run_id }}
+        run: node trusted/scripts/codex-issue/run.mjs publish

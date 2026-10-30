@@ -1,0 +1,32 @@
+{
+  "schema": "mss-check-receipt-v1",
+  "goal_id": "MSS-004",
+  "check_id": "CODEX_DISPATCH_TESTS",
+  "attempt": "20261030121543",
+  "source_commit": "c4358db8782860f7341fd7dabf898c45364e052c",
+  "runner": "local-native-windows-offline",
+  "started_at": "2026-10-30T12:15:43.6114483Z",
+  "ended_at": "2026-10-30T12:15:45.3123764Z",
+  "command": ["node", "--test", "scripts/codex-issue/test/dispatcher.test.mjs"],
+  "result": "PASS",
+  "exit_code": 0,
+  "test_summary": {"passed": 80, "failed": 0, "skipped": 0},
+  "evidence": [
+    {"ref": "local-evidence:mss-dispatcher-c4358db-tests.log", "sha256": "cacbb0f799cf634a731100d95d466dee97d8bc23461b82d16d1490e9b2450c3b"},
+    {"ref": "local-evidence:mss-dispatcher-c4358db-yaml.log", "sha256": "06cb61ecbdb405204865e5a585101717957e305bfa6a2e83b04f4609aa03f043"}
+  ],
+  "supplemental_checks": [
+    {"check": "YAML_1_2_SYNTAX_AND_PARSED_SECURITY_CONTRACTS", "command_template": ["node", "scripts/codex-issue/validate-workflow.mjs", "<installed Playwright YAML module>"], "parser": "Existing bundled playwright-core/lib/utilsBundle.js exports.yaml", "result": "PASS", "exit_code": 0},
+    {"check": "NODE_SYNTAX", "commands": [["node", "--check", "scripts/codex-issue/policy.mjs"], ["node", "--check", "scripts/codex-issue/run.mjs"], ["node", "--check", "scripts/codex-issue/validate-workflow.mjs"]], "result": "PASS", "exit_code": 0},
+    {"check": "WHITESPACE", "command": ["git", "diff", "--check"], "result": "PASS", "exit_code": 0}
+  ],
+  "limits": {
+    "model_calls": 0,
+    "paid_api_tests": "NOT_RUN_NO_AUTHORIZATION",
+    "github_actions_engine": "NOT_RUN",
+    "native_isolation_and_broker": "NOT_VERIFIED",
+    "toolkit_parity": "NOT_VERIFIED",
+    "cargo": "NOT_RUN_NO_RUST_SOURCE_CHANGE",
+    "live_integration": "BLOCKED_NO_REGISTERED_RUNNERS_OR_ACTIONS_SECRETS"
+  }
+}

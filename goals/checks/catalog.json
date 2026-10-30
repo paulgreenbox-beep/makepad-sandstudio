@@ -1,6 +1,7 @@
 {
   "schema": "mss-check-catalog-v1",
   "checks": [
+    {"id": "CODEX_DISPATCH_TESTS", "description": "Model-free Issue dispatcher routing, authorization and publication contracts", "command": ["node", "--test", "scripts/codex-issue/test/dispatcher.test.mjs"], "requires": ["exit_code", "commit_sha", "test_summary"]},
     {
       "id": "RUST_FMT",
       "description": "Rust formatting",
