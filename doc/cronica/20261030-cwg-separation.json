@@ -1,0 +1,52 @@
+{
+  "schema": "mss-scope-development-record-v1",
+  "created_utc": "2026-10-30T20:57:56.836384+00:00",
+  "base_main": "83ff50112fbbdc1cd2a43ccd2ac1650504394a67",
+  "scope": "Metadata and planning transform only. No Rust, Windows, app, GPU or CWG runtime acceptance.",
+  "source_sha256": {
+    "scripts/mss_scope.py": "f17472c683a70fb33ff8857ad6ac4f2a774ee7fe8c0a4f1f221fa3db4bb4a6dc",
+    "scripts/tests/test_mss_scope.py": "039ee42974b00e61533115417b5002d7cc60103007348170a455574334ff926c",
+    "doc/plans/mss-scope-v2.json": "c035b192f5e003fbf9a43936ce28428e98f83c328e2642025c3e642f0a6f16fa",
+    "doc/cwg-separation.md": "fdf7a1db96fe8c4ce78aad10ec127ec6068b71537fff8a92d33f1d7dad0715a6"
+  },
+  "checks": [
+    {
+      "command": "python -m unittest discover -s scripts/tests -p test_mss_scope.py -v",
+      "result": "PASS",
+      "exit_code": 0,
+      "tests": 14,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "command": "python scripts/mss_scope.py --source <extracted-reviewed-plan>",
+      "result": "PASS",
+      "exit_code": 0,
+      "counts": {
+        "mss_original_packages": 14,
+        "mss_new_verification_gate": 1,
+        "external_cwg_packages": 8,
+        "preserved_invariants": 54,
+        "preserved_proposed_checks": 68,
+        "toolkit_operations": 112
+      }
+    },
+    {
+      "command": "python -m py_compile scripts/mss_scope.py scripts/tests/test_mss_scope.py",
+      "result": "PASS",
+      "exit_code": 0
+    },
+    {
+      "command": "Rust fmt/check/test/clippy/debug/release and native GUI/GPU",
+      "result": "NOT_RUN",
+      "reason": "No Rust toolchain or Windows host available; no Rust code changed."
+    }
+  ],
+  "log_sha256": {
+    "scope-tests.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "scope-tests.stderr": "0cc1f83ff81ab3d13a53eff65bd0f854f7d3602413e76c5e3c742d3d6556f100",
+    "scope-projection.stdout": "ddd3ce09a729edeef19b8b06687b2372a7a00649f71fa27596c361a020bb7800",
+    "scope-projection.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "authority": "Development record only; not a qualified production receipt. Previous results are not promoted."
+}
