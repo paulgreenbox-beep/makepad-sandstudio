@@ -618,6 +618,9 @@ checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
 [[package]]
 name = "mss-api"
 version = "0.1.0"
+dependencies = [
+ "mss-core",
+]
 
 [[package]]
 name = "mss-core"
@@ -637,10 +640,22 @@ version = "0.1.0"
 [[package]]
 name = "mss-remote"
 version = "0.1.0"
+dependencies = [
+ "mss-api",
+ "mss-core",
+]
 
 [[package]]
 name = "mss-render"
 version = "0.1.0"
+dependencies = [
+ "makepad-zune-core",
+ "makepad-zune-inflate",
+ "makepad-zune-png",
+ "mss-api",
+ "mss-core",
+ "mss-remote",
+]
 
 [[package]]
 name = "mss-sdk"

@@ -4,6 +4,14 @@
 
 This document states design requirements, not implemented protections. MSS has no session broker, remote gateway, permission enforcement, file broker, process supervisor, or OS sandbox yet. All such controls are NOT_VERIFIED.
 
+The PR #1–#4 integration adds in-process logical ownership/generation checks,
+registry-scoped opaque IDs, pre-dispatch cancellation and bounded frame admission.
+These are library contracts only. `RequestContext` is supplied by trusted calling
+code; it does not authenticate an external agent. Core controller methods and
+Closed Session cleanup receipts must not be exposed directly to untrusted clients.
+Process-local namespace counters are not persistent, random session credentials.
+The planned external permission enforcement above remains NOT_VERIFIED.
+
 ## Trust boundaries
 
 - AI-agent requests, test scripts, application files, and app telemetry are untrusted input.

@@ -12,4 +12,29 @@ The inspected Makepad app Remote can request app-side GPU readback and return PN
 
 ## Current state
 
-No frame transport, GPU interop, API stream, or Desktop display is implemented. Native rendering and per-session frame ownership remain NOT_VERIFIED.
+`FrameStore` is an in-process latest-frame cache for supplied PNG bytes. Publish,
+read and live removal require MSS_API authorization for the exact session and
+generation. Keys retain the Core registry namespace. Identity and sequence are
+checked before changing stored data; removing live pixels retains the sequence
+watermark. The immutable Closed Session returned by Core permits exact-session
+cache cleanup after the live record has been removed. A live Session snapshot
+cannot authorize that cleanup. This controller capability is not a network API.
+
+Limits cover per-frame and aggregate encoded bytes, cached frame and watermark
+counts, dimensions and decoded bytes. Admission decodes a bounded static PNG
+profile: noninterlaced 8-bit grayscale, RGB, grayscale-alpha or RGBA, with IHDR,
+consecutive IDAT and final IEND chunks only. Chunk CRC, zlib/Adler integrity,
+declared dimensions and decoded scanline length are checked. Other legal PNG
+profiles/metadata are explicitly refused; this is not universal PNG conformance.
+Rejected data must preserve the previous frame and watermark.
+
+The decoded-byte cap limits accepted pixels, not exact peak process memory.
+The pinned inflater's limit is best effort; temporary allocations also depend
+on the bounded encoded input and decoder buffers. Host-selected bounds must be
+conservative. No OS memory containment or adversarial-process sandbox is claimed.
+
+The tests use synthetic PNG fixtures. App-origin authenticity, GPU capture,
+capture time, process identity, content-digest evidence, transport/API streaming
+and live Desktop presentation remain NOT_IMPLEMENTED / NOT_VERIFIED. Storing a
+valid PNG does not prove that a Makepad renderer produced it. See
+[verification](../doc/testing.md) and [dependency review](../doc/compatibility.md).

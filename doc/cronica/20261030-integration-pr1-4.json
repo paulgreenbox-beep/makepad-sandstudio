@@ -1,0 +1,747 @@
+{
+  "schema": "mss-integration-development-evidence-v1",
+  "entry_kind": "Unmanaged Cronica source-level development record; not native acceptance, production check receipt, managed Dungeon index or GOAL VERIFIED assignment",
+  "source_commit": "352e2c317de74c67e61fa38371a99be54c606c10",
+  "source_tree": "f3a1c9b0a9606dc87a88de992ca452e435c54bf3",
+  "branch": "integration/mss-core-api-remote-render",
+  "main_baseline": "83ff50112fbbdc1cd2a43ccd2ac1650504394a67",
+  "source_inputs": [
+    {
+      "pr": 1,
+      "module": "MSS_Core",
+      "head": "6998cef53077eab021f129e583d4979e2e70e297",
+      "base": "main",
+      "base_sha": "83ff50112fbbdc1cd2a43ccd2ac1650504394a67",
+      "merge": "3ab9f7a06ca3a4aa52042d95e13e6e4b83aa49be"
+    },
+    {
+      "pr": 2,
+      "module": "MSS_API",
+      "head": "abcf43b08a13da5fbf70ba1b66ef16de512ebcb5",
+      "base": "codex/mss-core-session-registry",
+      "base_sha": "75e39070f0ac12ac314bff5e627da56675c55f99",
+      "merge": "703dd3d6158a67e3bc73a17a8b4bf78fb46c683e"
+    },
+    {
+      "pr": 3,
+      "module": "MSS_Remote",
+      "head": "ad42653ac6e5b60c63262e48441a02607b0e5d83",
+      "base": "codex/mss-api-contract",
+      "base_sha": "abcf43b08a13da5fbf70ba1b66ef16de512ebcb5",
+      "merge": "be96f3ba020a8671f3d48d1ee7aa419ba6b26464"
+    },
+    {
+      "pr": 4,
+      "module": "MSS_Render",
+      "head": "de2d32ee44cbab5882a5f5bf359db89e565cd26f",
+      "base": "codex/mss-api-contract",
+      "base_sha": "abcf43b08a13da5fbf70ba1b66ef16de512ebcb5",
+      "merge": "bc5a73a1539d19e51220506377ebec96395672c4"
+    }
+  ],
+  "source_inputs_rechecked_before_publication": true,
+  "integration_method": "Ordered non-fast-forward merges of exact source heads; all original histories retained; no source PR branch rewritten or closed",
+  "owner_modules": [
+    "mss.core",
+    "mss.api",
+    "mss.remote",
+    "mss.render"
+  ],
+  "object_ids_preserved": true,
+  "goal_registry": "Separate unmerged PR #5; not imported or modified; no second task system",
+  "environment": {
+    "platform": "Windows x86_64",
+    "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+    "cargo": "cargo 1.97.1 (c980f4866 2026-06-30)",
+    "cargo_net_offline": true,
+    "cargo_build_jobs": 2,
+    "cargo_incremental": false,
+    "cargo_commands_serial": true
+  },
+  "cheapest_verification_path": "Focused four-package all-target tests including public composition cases, then every explicit full-workspace/release gate",
+  "focused_checks": [
+    {
+      "name": "focused-tests",
+      "source_commit": "352e2c317de74c67e61fa38371a99be54c606c10",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "mss-core",
+        "-p",
+        "mss-api",
+        "-p",
+        "mss-remote",
+        "-p",
+        "mss-render",
+        "--all-targets",
+        "--locked",
+        "--offline"
+      ],
+      "result": "PASS",
+      "exit_code": 0,
+      "started_at": "2026-10-30T17:11:42.3285486Z",
+      "ended_at": "2026-10-30T17:11:46.1370101Z",
+      "log_sha256": "16d752b60235cc20ddd35fcc086f75910c7cb79f4d7ae8c6bcbea2c32e53d46a",
+      "evidence_ref": "local-evidence:focused/focused-tests.log",
+      "test_summaries": [
+        "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out",
+        "test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out",
+        "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out",
+        "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out",
+        "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out"
+      ],
+      "test_cases": [
+        {
+          "test": "tests::cancellation_is_monotonic_shared_by_clones_and_independent_of_other_tokens",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::denied_foreign_then_unsupported_for_valid_owner",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::every_operation_authenticates_before_reporting_unsupported_or_cancelled",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::operations_classify_mutations",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::stale_closed_and_foreign_registry_requests_are_refused_before_cancellation",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::unknown_operation_has_no_default_and_does_not_bypass_authorization",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::agent_allocator_exhaustion_preserves_state_and_never_wraps",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::closing_unselected_owned_neighbor_preserves_selection",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::dropped_registry_namespace_is_not_reused_in_this_process",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::exact_handle_refuses_stale_generation_and_foreign_agent",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::foreign_agent_cannot_close_neighbor",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::foreign_registry_agent_must_not_be_assumed_globally_unique",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::foreign_registry_handles_cannot_alias_equal_local_session_numbers",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::independent_sessions_and_unique_ids",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::public_generation_constructor_is_checked_and_grants_no_authority",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::registry_namespace_exhaustion_allocates_max_once_then_refuses",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::rejected_exact_handle_operations_preserve_sessions_and_selection",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::rejects_bad_input_without_allocating_session_id",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::selection_and_close_do_not_touch_neighbor",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::session_allocator_exhaustion_preserves_state_and_never_wraps",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::stale_ids_never_reused",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::unknown_agent_does_not_create_sessions_or_consume_ids",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::cancellation_and_invalid_shape_never_bypass_owner_generation_or_close",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::every_supported_shape_refuses_without_delivery_or_completion",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::foreign_agent_cannot_submit",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::utf8_byte_bounds_and_controls_are_checked_without_truncation",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::valid_intent_is_not_reported_executed",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::bounded_frames_and_monotonic_sequence",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::closed_receipt_does_not_erase_pixels_or_fence_of_another_generation",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::forbidden_cross_session_and_foreign_read",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::frame_count_and_encoded_budgets_refuse_without_eviction_or_fence_advance",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::legal_profiles_outside_static_admission_and_decoded_limit_are_refused",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::live_forget_keeps_bounded_watermark_until_exact_closed_receipt",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::malformed_png_refusals_preserve_frame_and_sequence_fence",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::rejects_large_and_empty_frames",
+          "outcome": "ok"
+        },
+        {
+          "test": "tests::unauthorized_forget_and_other_registry_receipts_preserve_owned_frame",
+          "outcome": "ok"
+        },
+        {
+          "test": "absent_backends_are_explicit_and_live_frame_removal_does_not_reset_sequence",
+          "outcome": "ok"
+        },
+        {
+          "test": "cancellation_before_dispatch_preserves_sessions_frames_and_ownership_checks",
+          "outcome": "ok"
+        },
+        {
+          "test": "close_and_receipt_cleanup_preserve_neighbor_and_refuse_closed_handle",
+          "outcome": "ok"
+        },
+        {
+          "test": "equal_local_numbers_in_other_registries_cannot_cross_api_remote_or_frame_cache",
+          "outcome": "ok"
+        },
+        {
+          "test": "populated_frame_cache_enforces_owner_and_publisher_session",
+          "outcome": "ok"
+        },
+        {
+          "test": "remote_authorization_refuses_foreign_call_and_never_reports_execution",
+          "outcome": "ok"
+        },
+        {
+          "test": "separate_agents_access_only_their_exact_sessions_through_api",
+          "outcome": "ok"
+        },
+        {
+          "test": "stale_generation_is_rejected_by_all_three_consumers_without_frame_changes",
+          "outcome": "ok"
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "name": "metadata",
+      "source_commit": "352e2c317de74c67e61fa38371a99be54c606c10",
+      "command": [
+        "cargo",
+        "metadata",
+        "--format-version",
+        "1",
+        "--locked",
+        "--offline"
+      ],
+      "result": "PASS",
+      "exit_code": 0,
+      "started_at": "2026-10-30T17:12:11.0690615Z",
+      "ended_at": "2026-10-30T17:12:11.6782686Z",
+      "log_sha256": "3c3f7a4cd90903c998bd494d4d229fa0836b5c8b03e5a715517938b38edd6351",
+      "evidence_ref": "local-evidence:final-v2/metadata.log",
+      "test_summaries": [],
+      "test_cases": []
+    },
+    {
+      "name": "fmt",
+      "source_commit": "352e2c317de74c67e61fa38371a99be54c606c10",
+      "command": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "result": "PASS",
+      "exit_code": 0,
+      "started_at": "2026-10-30T17:12:11.7688565Z",
+      "ended_at": "2026-10-30T17:12:12.0122781Z",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence_ref": "local-evidence:final-v2/fmt.log",
+      "test_summaries": [],
+      "test_cases": []
+    },
+    {
+      "name": "check",
+      "source_commit": "352e2c317de74c67e61fa38371a99be54c606c10",
+      "command": [
+        "cargo",
+        "check",
+        "--workspace",
+        "--all-targets",
+        "--locked",
+        "--offline"
+      ],
+      "result": "PASS",
+      "exit_code": 0,
+      "started_at": "2026-10-30T17:12:12.0544638Z",
+      "ended_at": "2026-10-30T17:12:37.3969207Z",
+      "log_sha256": "5ad13740782b37e8ae6f6926f2071098ce8e96f67f26be7d525f4349fad3a5f5",
+      "evidence_ref": "local-evidence:final-v2/check.log",
+      "test_summaries": [],
+      "test_cases": []
+    },
+    {
+      "name": "test",
+      "source_commit": "352e2c317de74c67e61fa38371a99be54c606c10",
+      "command": [
+        "cargo",
+        "test",
+        "--workspace",
+        "--all-targets",
+        "--locked",
+        "--offline"
+      ],
+      "result": "PASS",
+      "exit_code": 0,
+      "started_at": "2026-10-30T17:12:37.4679378Z",
+      "ended_at": "2026-10-30T17:13:48.4025736Z",
+      "log_sha256": "7f89be95f5f997444d96f2c7ad3c03f7dd0b36a58b84e27ad765fa4d0f925d86",
+      "evidence_ref": "local-evidence:final-v2/test.log",
+      "test_summaries": [
+        "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out",
+        "test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out",
+        "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out",
+        "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out",
+        "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out"
+      ],
+      "test_cases": [
+        {
+          "outcome": "ok",
+          "test": "tests::cancellation_is_monotonic_shared_by_clones_and_independent_of_other_tokens"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::denied_foreign_then_unsupported_for_valid_owner"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::every_operation_authenticates_before_reporting_unsupported_or_cancelled"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::operations_classify_mutations"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::stale_closed_and_foreign_registry_requests_are_refused_before_cancellation"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::unknown_operation_has_no_default_and_does_not_bypass_authorization"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::agent_allocator_exhaustion_preserves_state_and_never_wraps"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::closing_unselected_owned_neighbor_preserves_selection"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::dropped_registry_namespace_is_not_reused_in_this_process"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::exact_handle_refuses_stale_generation_and_foreign_agent"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::foreign_agent_cannot_close_neighbor"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::foreign_registry_agent_must_not_be_assumed_globally_unique"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::foreign_registry_handles_cannot_alias_equal_local_session_numbers"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::independent_sessions_and_unique_ids"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::public_generation_constructor_is_checked_and_grants_no_authority"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::registry_namespace_exhaustion_allocates_max_once_then_refuses"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::rejected_exact_handle_operations_preserve_sessions_and_selection"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::rejects_bad_input_without_allocating_session_id"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::selection_and_close_do_not_touch_neighbor"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::session_allocator_exhaustion_preserves_state_and_never_wraps"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::stale_ids_never_reused"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::unknown_agent_does_not_create_sessions_or_consume_ids"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::cancellation_and_invalid_shape_never_bypass_owner_generation_or_close"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::every_supported_shape_refuses_without_delivery_or_completion"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::foreign_agent_cannot_submit"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::utf8_byte_bounds_and_controls_are_checked_without_truncation"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::valid_intent_is_not_reported_executed"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::bounded_frames_and_monotonic_sequence"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::closed_receipt_does_not_erase_pixels_or_fence_of_another_generation"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::forbidden_cross_session_and_foreign_read"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::frame_count_and_encoded_budgets_refuse_without_eviction_or_fence_advance"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::legal_profiles_outside_static_admission_and_decoded_limit_are_refused"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::live_forget_keeps_bounded_watermark_until_exact_closed_receipt"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::rejects_large_and_empty_frames"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::malformed_png_refusals_preserve_frame_and_sequence_fence"
+        },
+        {
+          "outcome": "ok",
+          "test": "tests::unauthorized_forget_and_other_registry_receipts_preserve_owned_frame"
+        },
+        {
+          "outcome": "ok",
+          "test": "absent_backends_are_explicit_and_live_frame_removal_does_not_reset_sequence"
+        },
+        {
+          "outcome": "ok",
+          "test": "cancellation_before_dispatch_preserves_sessions_frames_and_ownership_checks"
+        },
+        {
+          "outcome": "ok",
+          "test": "close_and_receipt_cleanup_preserve_neighbor_and_refuse_closed_handle"
+        },
+        {
+          "outcome": "ok",
+          "test": "equal_local_numbers_in_other_registries_cannot_cross_api_remote_or_frame_cache"
+        },
+        {
+          "outcome": "ok",
+          "test": "populated_frame_cache_enforces_owner_and_publisher_session"
+        },
+        {
+          "outcome": "ok",
+          "test": "remote_authorization_refuses_foreign_call_and_never_reports_execution"
+        },
+        {
+          "outcome": "ok",
+          "test": "separate_agents_access_only_their_exact_sessions_through_api"
+        },
+        {
+          "outcome": "ok",
+          "test": "stale_generation_is_rejected_by_all_three_consumers_without_frame_changes"
+        }
+      ]
+    },
+    {
+      "name": "clippy",
+      "source_commit": "352e2c317de74c67e61fa38371a99be54c606c10",
+      "command": [
+        "cargo",
+        "clippy",
+        "--workspace",
+        "--all-targets",
+        "--locked",
+        "--offline",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "result": "PASS",
+      "exit_code": 0,
+      "started_at": "2026-10-30T17:13:48.4695448Z",
+      "ended_at": "2026-10-30T17:13:50.2922835Z",
+      "log_sha256": "ba6021e8aa4d396ddc0986d9ea0c4d92a63e8594e3dcf11dec24066aa5f9e8cd",
+      "evidence_ref": "local-evidence:final-v2/clippy.log",
+      "test_summaries": [],
+      "test_cases": []
+    },
+    {
+      "name": "build",
+      "source_commit": "352e2c317de74c67e61fa38371a99be54c606c10",
+      "command": [
+        "cargo",
+        "build",
+        "--workspace",
+        "--locked",
+        "--offline"
+      ],
+      "result": "PASS",
+      "exit_code": 0,
+      "started_at": "2026-10-30T17:13:50.3406270Z",
+      "ended_at": "2026-10-30T17:13:53.1038887Z",
+      "log_sha256": "1e1bdd330a72281f5760ba2c6fe8ee279bf51c1099d04d22b809fbaa854f13a8",
+      "evidence_ref": "local-evidence:final-v2/build.log",
+      "test_summaries": [],
+      "test_cases": []
+    },
+    {
+      "name": "release",
+      "source_commit": "352e2c317de74c67e61fa38371a99be54c606c10",
+      "command": [
+        "cargo",
+        "build",
+        "--workspace",
+        "--release",
+        "--locked",
+        "--offline"
+      ],
+      "result": "PASS",
+      "exit_code": 0,
+      "started_at": "2026-10-30T17:13:53.1615578Z",
+      "ended_at": "2026-10-30T17:17:45.2682350Z",
+      "log_sha256": "c28376f021c27450d53d1b3ae2d3d36fab41748807223434c91dfe934799e689",
+      "evidence_ref": "local-evidence:final-v2/release.log",
+      "test_summaries": [],
+      "test_cases": []
+    },
+    {
+      "name": "diff",
+      "source_commit": "352e2c317de74c67e61fa38371a99be54c606c10",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "result": "PASS",
+      "exit_code": 0,
+      "started_at": "2026-10-30T17:17:45.3243873Z",
+      "ended_at": "2026-10-30T17:17:45.3703909Z",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence_ref": "local-evidence:final-v2/diff.log",
+      "test_summaries": [],
+      "test_cases": []
+    }
+  ],
+  "summary": {
+    "final_commands_passed": 8,
+    "final_commands_failed": 0,
+    "workspace_members": 7,
+    "tests_passed": 44,
+    "tests_failed": 0,
+    "tests_ignored": 0,
+    "core": 16,
+    "api": 6,
+    "remote": 5,
+    "render_unit": 9,
+    "composition": 8,
+    "original_test_names_preserved": 19,
+    "added_tests": 25
+  },
+  "original_assertion_review": "All original Core/API/Remote/Render acceptance assertions reviewed and retained; Core private unknown-agent fixture now carries namespace; Render positive fixture is real PNG and live forget uses authorized API; former signature+junk is a new refusal case",
+  "dependency_review": {
+    "makepad_repository": "https://github.com/makepad/makepad",
+    "makepad_revision": "130be1d0318adcf69453d925342607466353152c",
+    "external_lock_package_entries": 126,
+    "external_lock_entries_unchanged": true,
+    "lock_changes": "Only local MSS dependency edges, including direct consumers of already locked zune crates and test-only Remote edge",
+    "render_direct_crates": [
+      "makepad-zune-core 0.5.1",
+      "makepad-zune-png 0.5.2",
+      "makepad-zune-inflate 0.2.54"
+    ],
+    "license": "MIT OR Apache-2.0 OR Zlib",
+    "features": "Direct defaults disabled; inflate zlib enabled; workspace unification may enable upstream defaults through Desktop",
+    "toolkit_revision": "0b01942f1a7d1c276f130c9db03146cb96c1718a",
+    "toolkit_execution": "NOT_RUN"
+  },
+  "preparatory_observations": [
+    {
+      "result": "BLOCKED",
+      "command": [
+        "cargo",
+        "metadata",
+        "--format-version",
+        "1",
+        "--offline"
+      ],
+      "source_state": "Uncommitted integration before source commit; not final acceptance",
+      "exit_code": 101,
+      "reason": "Existing lockfile dependencies hilog-sys 0.1.9 and smallvec 1.16.4 missing from cache for complete cross-platform metadata",
+      "log_sha256": "719e8d2898df88c6015f30a451afd5a924673cc82151b442f4674de39fb10245"
+    },
+    {
+      "result": "PASS",
+      "command": [
+        "cargo",
+        "metadata",
+        "--format-version",
+        "1",
+        "--locked"
+      ],
+      "source_state": "Uncommitted integration before source commit; dependency cache preparation only",
+      "exit_code": 0,
+      "reason": "Fetched only these two already locked crates under authorized dependency resolution; no package upgrade or executable installation",
+      "log_sha256": "7273b0de87af47f6514da7324680da55451a62491b899a8759738e2adef6f046"
+    },
+    {
+      "result": "FAIL",
+      "source_commit": "352e2c317de74c67e61fa38371a99be54c606c10",
+      "reason": "Local log summarizer treated empty successful fmt output as null; harness stopped after metadata/fmt before further gates. Fixed summarizer only, preserved logs; all eight final gates subsequently passed on identical source",
+      "failure_scope": "Local evidence collector, not Rust contract/test failure",
+      "log_refs": [
+        "local-evidence:final/metadata.log",
+        "local-evidence:final/fmt.log"
+      ]
+    }
+  ],
+  "review": {
+    "source_review": "Second read-only agent review found no concrete Core/API/Remote/Render blocker; not independent native qualification",
+    "mermaid": {
+      "blocks": 8,
+      "manual_syntax_review": "No obvious syntax defect found in eight blocks; CURRENT logical and PLANNED native paths distinct",
+      "parser": "NOT_RUN: no installed Mermaid parser found; none installed",
+      "native_acceptance": false
+    }
+  },
+  "safety": {
+    "model_api_requests": 0,
+    "app_gui_launched": false,
+    "user_desktop_input": false,
+    "containers_or_vms_used_by_task": false,
+    "dispatcher_enabled": false,
+    "workflows_changed": false,
+    "other_pr_branches_modified": false,
+    "external_source_repositories_modified": false,
+    "automatic_merge": false,
+    "goal_verified_assigned": false
+  },
+  "limitations": [
+    "Logical registry namespaces are process-local and reset after process restart; not external authentication or OS isolation",
+    "Remote transport/capability resolution/WidgetId mapping/replay and outcome ledger are NOT_IMPLEMENTED; valid requests return NotDispatched",
+    "API executors including Toolkit Script runner are NOT_IMPLEMENTED; operation classes return Unsupported",
+    "Cancellation is admission-only, not cancellation or rollback of dispatched work",
+    "Synthetic PNG cache admission does not prove app origin, GPU capture, runtime health, freshness or native display",
+    "PNG admission supports only the documented static 8-bit noninterlaced profile; legal other PNG profiles are refused",
+    "Accepted pixel limit is not exact peak RAM; pinned inflater allocation also depends on bounded encoded bytes",
+    "Native lifecycle, separate app/test processes, OS resource cleanup, multi-session GUI and full unchanged Toolkit parity remain NOT_VERIFIED"
+  ],
+  "raw_logs": "Retained locally outside repository; public record contains allowlisted commands/results and SHA256 only, avoiding host cache/checkout paths",
+  "source_files": {
+    "Cargo.lock": "784dd945fbdf952de6ab6c51d2e65e5f79c08618f2bef1f910620a40d0c0d4ba",
+    "Cargo.toml": "6e6cd2db5d41cc536de3c7308ec459939931cfead4ed314c3eacbf26fa6a2769",
+    "MSS_API/Cargo.toml": "bbb83ed363693bec80db5305b5f269e6078aeb756fbb77094e1325880549351a",
+    "MSS_API/src/lib.rs": "940d172685859fa49de5ccdeeebdff153e47b7368c99ba0a61b3d32e62fe171c",
+    "MSS_Core/Cargo.toml": "8d53acfe7766bcb5b0aae24a5cede5cd3da4d062686eaaf6567d68d7d6a92e6b",
+    "MSS_Core/src/lib.rs": "97258905239763cdfdb229c4f7465a011523756728c08ce245e36e4385967a3e",
+    "MSS_Desktop/Cargo.toml": "2fd4c220cfc0ea764b9d9c784a402100070fc26e4f1619cd773c16fe61fc3e3f",
+    "MSS_Desktop/src/lib.rs": "20a43d7edcfa237455c7f641474312914eb52e21743ba21357219f5847a24e29",
+    "MSS_Desktop/src/main.rs": "36fc373608d68f12536b842aaae04e4b2cba5ddb4374dee41194cd392e65f479",
+    "MSS_MCP/Cargo.toml": "ec7f39f15a68a2a907b98ff01ec2c4ee719f0d2fb5bf58b605c56f86d421413f",
+    "MSS_MCP/src/lib.rs": "902c8a40e4661b5406ac61803d03d2731f8832021297e888187d4eabf23c39fe",
+    "MSS_Remote/Cargo.toml": "f3bacb2915f49ede54328a6aeefff04002160711ca86721cd25565aff2defa23",
+    "MSS_Remote/src/lib.rs": "c17b5adb54badefee5bafdf51b1b7f5c9d166f7cda1464b3fb5b833814a32def",
+    "MSS_Render/Cargo.toml": "81953a2b78c0d214e6420033f492ef0f8e7e400ac450180aa7e8c55c9195a738",
+    "MSS_Render/src/lib.rs": "e4a2b2080f384572f21f56a6740dc4cd467706021b932f366214a17a7c3cb1ed",
+    "MSS_Render/tests/fixtures/overlong-scanline.zlib.bin": "dc0d762ecd95f289273c1a57c16df281dcfd22210d7f01ac15551088af4a3533",
+    "MSS_Render/tests/fixtures/rgba1x1.png.bin": "eb52dccdcd43a07c59b48944e7dfba6061dc8cdbf9b1d201f10da76cb2a858a3",
+    "MSS_Render/tests/integration.rs": "9f563199b2f7a0fbd907089f2886d616f143d80ef312b191b81e80ce058790ea",
+    "MSS_SDK/Cargo.toml": "59675f04fee7d96770a24e04bf820453e60edd603946e9d190174fa80fbedbbf",
+    "MSS_SDK/src/lib.rs": "48de5718d3a32a61cd6ddffb270086f8f50d6be809824067f2dca69c17b67e23"
+  }
+}

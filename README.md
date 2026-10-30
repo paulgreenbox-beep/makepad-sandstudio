@@ -16,7 +16,7 @@
 
 MSS is intended to let independent AI agents work with separate Makepad applications at the same time. Each session is planned to own a distinct application process, control channel, test worker, render stream, state, and evidence directory. The native MSS desktop is planned as a tabbed workspace with session state on the left and the selected application's rendered view on the right.
 
-The published repository contains a seven-crate Rust workspace and a native Makepad Desktop shell. The Desktop currently renders an illustrative three-slot session sidebar and a no-frame placeholder; it is not connected to sessions, app capture, tests, or MSS_API. The other crates are architecture placeholders. No app lifecycle, addressed control, frame pipeline, test execution, MCP server, or sandbox is implemented or verified.
+The repository contains a seven-crate Rust workspace and a native Makepad Desktop shell. The Desktop renders an illustrative three-slot sidebar and a no-frame placeholder; it is not connected to sessions, app capture, tests or MSS_API. Core/API/Remote/Render now compose a tested in-process logical registry, authorization/refusal gate and supplied-PNG cache. This does not implement app lifecycle, native command delivery, GPU capture, Toolkit execution, MCP transport or an OS sandbox. See the [PR #1–#4 integration report](doc/integration-pr1-4.md) for exact source, checks and limits.
 
 ## Non-negotiable constraints
 
@@ -35,12 +35,12 @@ See [architecture](doc/architecture.md), [testing and parity](doc/testing.md), [
 
 | Module | Responsibility | Current state |
 |---|---|---|
-| MSS_Core | Session, agent, process and resource ownership | Architecture only |
-| MSS_Remote | Session-addressed Makepad commands and result checks | NOT_VERIFIED |
-| MSS_Render | App-originated frames through API to Desktop | NOT_VERIFIED |
+| MSS_Core | Session, agent, process and resource ownership | Logical scoped registry TESTED; native lifecycle NOT_VERIFIED |
+| MSS_Remote | Session-addressed Makepad commands and result checks | Admission/refusal TESTED; transport NOT_IMPLEMENTED |
+| MSS_Render | App-originated frames through API to Desktop | Supplied-PNG cache TESTED; native capture NOT_IMPLEMENTED |
 | MSS_SDK | Typed app integration, widget state and telemetry | NOT_VERIFIED |
 | MSS_MCP | Thin standard MCP adapters over the common API | NOT_VERIFIED |
-| MSS_API | Shared session, app, GUI, test and evidence contract | NOT_VERIFIED |
+| MSS_API | Shared session, app, GUI, test and evidence contract | Logical authorization/cancellation/refusal TESTED; executors NOT_IMPLEMENTED |
 | MSS_Desktop | Native Makepad shell prototype; live session tabs and app viewer | Prototype only; runtime acceptance NOT_RUN |
 | MSS_Skills | Agent instructions and safe usage examples | Documentation only |
 
@@ -56,11 +56,12 @@ These projects serve different roles. Toolkit parity is the acceptance baseline.
 
 ## Build the workspace
 
-The Desktop package uses Makepad from an exact upstream Git revision recorded in its Cargo manifest. Other module crates are placeholders. Cargo must be able to resolve the pinned revision and registry dependencies:
+Desktop and Render use the same exact Makepad Git revision; Render reuses already locked decoder crates without vendoring. SDK/MCP remain placeholders. Cargo must be able to resolve the lockfile's pinned sources:
 
 ~~~powershell
-cargo metadata --no-deps --format-version 1
-cargo check --workspace --all-targets
+cargo metadata --format-version 1 --locked
+cargo check --workspace --all-targets --locked
+cargo test --workspace --all-targets --locked
 ~~~
 
 These commands validate and compile the workspace only. They do not prove live sessions, app control, native frame capture, GUI acceptance, MCP behavior, test parity, or security isolation. The Desktop's illustrative content is not a runtime feature.

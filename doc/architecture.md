@@ -2,9 +2,23 @@
 
 ## Scope and state
 
-MSS is an architecture seed with a seven-crate workspace and a GUI-only Makepad Desktop shell. The six non-Desktop libraries report NOT_IMPLEMENTED; the Desktop source renders illustrative session rows and a no-frame placeholder. There is no session runtime, process supervisor, app control channel, app frame pipeline, SDK producer, MCP server, or automated test execution. Module names and diagrams describe intended ownership only.
+MSS has a seven-crate workspace with an in-process logical integration of Core, API, Remote admission and Render storage. This integration preserves the PR #1-#4 source histories listed in [compatibility.md](compatibility.md). The Desktop shell remains illustrative and disconnected from those modules. No application/test-worker process is launched, no Makepad command is delivered and no native frame is acquired or displayed by this integration.
+
+`IMPLEMENTED` below describes a source mechanism, not a passing test or accepted product feature. `TESTED` requires exact-source executed checks in [testing.md](testing.md) and its evidence; test declarations alone are insufficient. Native process ownership, authenticated app/client transport, complete Toolkit parity and full OS isolation remain `NOT_VERIFIED`. No dispatcher, GOAL executor or native-check-broker branch is included.
+
+| Current source slice | Implemented boundary | Still absent |
+|---|---|---|
+| MSS_Core | Scoped logical IDs, registry ownership/generation checks, allocation/refusal rules, selection and logical close | App/agent OS identity, process launch, native lifecycle and cleanup |
+| MSS_API | Shared logical authorization, four operation classes, auth-first unsupported/named dispatch and pre-dispatch cancellation | Execution backend, wire protocol/server, external caller authentication |
+| MSS_Remote | Read/Focus/Text intent shape checks, exact API authorization and explicit NotDispatched | App transport, widget lookup/capabilities, actual input, replay/outcome ledger |
+| MSS_Render | Owner-scoped supplied-frame admission/latest/cleanup, bounded cache/sequence fences and narrow decoded PNG validation | Renderer producer authenticity, capture, native frame transport, Desktop display |
+| MSS_SDK / MSS_MCP | Module declarations only; integration NOT_IMPLEMENTED | Semantic producer, telemetry and MCP client/server bindings |
+| MSS_Desktop | Makepad illustrative UI shell source | Live Core/API sessions and renderer-backed selected frame |
+| MSS_Skills | Development instructions | No execution authority is granted by instructions |
 
 ## Responsibilities
+
+This table states module ownership, including planned native responsibilities; the implemented subset is identified above.
 
 | Module | Owns | Must not own |
 |---|---|---|
@@ -19,7 +33,19 @@ MSS is an architecture seed with a seven-crate workspace and a GUI-only Makepad 
 
 ## Ownership model
 
-Each session has a fresh ID and generation and is assigned to one agent identity. It owns:
+### Current logical identities
+
+`RegistryId` is allocated monotonically within one process. `AgentId` and `SessionId` include that namespace and a nonzero local number; equality and map keys preserve the full scoped ID. `.get()` exposes only the local number and is not a complete identity. Two independent registries may both allocate local number one without authorizing each other's handles. Namespace/session/agent allocation refuses exhaustion without wrap or identity reuse; `SessionRegistry::try_new` exposes namespace exhaustion while `new` can panic at that bound.
+
+`SessionHandle` combines the scoped SessionId and nonzero generation. A new logical session currently starts at generation one; no process-rebind/generation-advance runtime is implemented. Supplying `SessionGeneration::new` is not authority to create a matching live session. Authorization checks the exact registry/session/generation and owner, and refuses stale, closed/unknown or foreign references without selecting another session.
+
+These identities are process-local values, not random credentials, persistent global IDs or authenticated OS/network principals. Process restart begins a new identity domain. `RequestContext` is supplied by trusted in-process code; equality with a registered AgentId does not authenticate an external MCP/API caller. Native process-bound identities and protected serialized envelopes require later design and evidence.
+
+Logical close removes only the exact owned record, marks the returned immutable `Session` value `Closed`, and clears selection only if that record was selected. Render may consume that closed-session value to release its matching cache/fence. This logical receipt proves neither app termination nor OS resource release; it is not a durable cross-process check receipt.
+
+### Planned native ownership
+
+The future runtime must bind each logical session to independently verified process and channel identities. The planned session owns:
 
 1. One Makepad application process created by MSS_Core.
 2. One test-worker process per active test job, separate from the app process.
@@ -32,6 +58,8 @@ The proposed process identity includes PID, process-birth identity, canonical ex
 
 ## Lifecycle
 
+Current Rust `SessionState` contains only `Created` and `Closed`. They describe logical records; they do not imply a process is starting or running.
+
 Proposed state transitions:
 
 ~~~text
@@ -43,7 +71,15 @@ Any live state -> OWNER_LOST -> RECOVERING or RESOURCE_QUARANTINED
 
 These are draft states, not an API enum. A timeout after a mutating request is OUTCOME_UNKNOWN until an independent read or evidence observation resolves it. It must not be treated as a failed dispatch or automatically repeated. A session with uncertain ownership or resource release remains unresolved.
 
-## API contract proposal
+## Current API and Remote contracts
+
+`Api::authorize` is the common logical authorization facade over Core. All four current classes (`Inspect`, `Capture`, `Input`, `Test`) remain unsupported for execution. Named class dispatch recognizes only `inspect`, `capture`, `input`, and `test`; it checks ownership before class parsing and returns `Unsupported` for unknown names or absent execution support. These names are not the Toolkit wire operation catalog and must not become a replacement `.aiui.json` schema.
+
+`CancellationToken` is a shared monotonic in-process request flag. API cancellable admission authorizes the exact context first, then checks the flag and returns `Cancelled` before dispatch. A foreign/stale context cannot mask its error with a cancellation request. This does not cancel in-flight work, roll back an app mutation, resolve OUTCOME_UNKNOWN or prove process cleanup.
+
+Remote uses the same API checks. Its AutomationId is only a requested string: nonblank, at most 256 UTF-8 bytes and without controls. Text is nonempty, at most 4096 UTF-8 bytes and without controls. Sequence must be nonzero. Every otherwise valid request returns `NotDispatched`; there is no transport, consumed sequence, completed action or automatic retry. The removed unused completion map is not described as replay protection. A future backend must add bounded pending/completed/unknown fencing before introducing side effects, plus independent target/capability and result checks. Pre-dispatch cancellation is available without claiming cancellation of app-side work.
+
+## Planned execution API
 
 MSS_API is the sole business-logic boundary for:
 
@@ -71,7 +107,7 @@ A response should distinguish:
 }
 ~~~
 
-This JSON is a shape sketch only. No schema or endpoint is implemented. Outcome values and failure taxonomy need compatibility review against the Toolkit contract before stabilization. PASS belongs to a verified test report, never to transport acknowledgement.
+This JSON is a future execution-response shape sketch only. No execution schema or server endpoint is implemented. The current Rust logical interfaces above must not be confused with that wire proposal. Outcome values and failure taxonomy need compatibility review against the Toolkit contract before stabilization. PASS belongs to a verified test report, never to transport acknowledgement.
 
 ## Addressed input and semantic capability
 
@@ -87,9 +123,19 @@ The current Toolkit source includes UI Automation semantic actions, physical-inp
 
 The required operation-by-operation matrix and acceptance evidence are in [testing.md](testing.md).
 
-## Rendering boundary
+## Current supplied-frame storage
 
-MSS_Render accepts frames only with source session/process identity and renderer generation. MSS_Desktop displays the latest valid frame for the selected tab; a stale or cross-session frame is rejected. Frame delivery must preserve native app state and identify capture mode and dimensions.
+`FrameStore` accepts caller-supplied encoded bytes and checks the API context against the frame's exact scoped SessionHandle. It uses full SessionId keys and `(SessionId, generation)` sequence watermarks; a duplicate/nonincreasing sequence is refused. Live `forget(api, context)` authorizes the owner and removes only matching pixels while retaining the replay watermark. `forget_closed(&Session)` accepts only Core's immutable `Closed` result and clears that exact incarnation's pixels/fence. Neither operation deletes files or stops processes. Closed-session cleanup must be explicitly called by the trusted owner path; no background lifecycle service is implied.
+
+Host-selected `FrameLimits` bound one encoded frame, total retained encoded bytes, frame count, watermark count, dimensions and accepted reconstructed pixel bytes. Defaults are 64 retained frames, 256 watermarks, maximum 4096-by-4096 dimensions, 16 MiB accepted reconstructed pixels per validation and total encoded capacity of 64 times the per-frame cap. Zero/exhausted bounds refuse admission rather than silently evicting another session. Invalid input, stale sequence and capacity refusal precede mutation of the cached frame and watermark. The pixel guard is not an exact peak-RAM cap: encoded/filtered/decoded buffers have separate lifetimes. The reviewed upstream inflater's limit is best effort: stored blocks can overshoot, and literal paths can continue without that check, so temporary allocation also depends on the admitted encoded IDAT bytes. Literal expansion is bounded by those encoded bits, rather than by a fixed decoded-limit overhead. Trusted host limits must account for this behavior and decoder allocation overhead. These are local admission/cache bounds, not limits on an already allocated caller payload or a complete OS memory quota.
+
+Admission validates CRC/chunk structure, declared dimensions against IHDR, bounded zlib data/checksum/filter rows and actual pixel decode. The supported profile is deliberately narrow: static, noninterlaced 8-bit grayscale/RGB/grayscale-alpha/RGBA with IHDR, consecutive IDAT and IEND. Palette, 16-bit, interlaced, ancillary-metadata and animated PNG are refused. This is not universal PNG compatibility or a blank-image/visual assertion. The encoder/decoder compatibility of real Makepad renderer output remains to be established before connecting a producer.
+
+The decoded pixels are used to validate supplied bytes; retained encoded bytes can then be read by an authorized caller. Successful publication proves cache admission, not capture, freshness, renderer origin, app health, postconditions or Toolkit screenshot acceptance. The store has no verified process identity, renderer-reset generation, native subscription or Desktop presentation path.
+
+## Planned native rendering boundary
+
+The future Render adapter must bind frames to source session/process identity and renderer generation. Desktop must display the latest valid app-originated frame for the selected tab and reject stale/cross-session frames. Native delivery must identify capture mode and preserve app state.
 
 The official Makepad app Remote's PNG readback is a source-inspected capture candidate. The Linux hosted Vulkan code's descriptor transfer is a platform-specific rendering mechanism, not a generic image-stream contract. Neither mechanism has been integrated or live-tested by MSS. See [compatibility.md](compatibility.md).
 
@@ -103,12 +149,12 @@ Resources are session-scoped by default. Truly global resources, if unavoidable,
 
 ## Planned implementation stages
 
-1. **Compatibility oracle:** freeze the Toolkit operation/schema/test inventory, source revisions, status semantics, and protected baseline suite.
-2. **Core ownership:** implement session IDs, agent binding, executable policy, process-birth identity, separate app/test processes, resource ownership, and exact close behavior.
-3. **Remote contract:** adapt app-originated Makepad Remote for owned process instances; verify discovery, auth boundary, semantic capabilities, postconditions, health, unknown outcomes, and no global input.
+1. **Compatibility oracle:** preserve the refreshed Toolkit operation/schema/test inventory, source revisions and status semantics; complete protected baseline execution remains ahead.
+2. **Core ownership:** logical scoped registry/selection/close is implemented; add executable policy, process-birth identity, separate app/test processes, native resource ownership and verified shutdown.
+3. **Remote contract:** retain the current auth-first refusal gate while adding an authenticated app transport for owned instances; verify discovery, semantic capabilities, replay/unknown outcomes, postconditions, health and no global input.
 4. **SDK/telemetry:** define app-side semantic identity, typed state/action/health, capability negotiation, and bounded observations.
 5. **Test execution:** run unchanged .aiui.json scripts through the public Toolkit runner/API and reproduce all failure, reporting, redaction, scheduling, retry, and cleanup contracts.
-6. **Render:** prove per-session app-originated frame capture, transport, freshness, GPU/device behavior, and Desktop display on every claimed platform.
+6. **Render:** retain bounded supplied-frame validation/cleanup while proving app-originated capture, producer authentication, transport, freshness, renderer/PNG compatibility, GPU/device behavior and Desktop display on every claimed platform.
 7. **API, MCP, and Desktop:** add the one shared API first, thin standard MCP mappings second, and native Makepad tabbed UI last.
 8. **Acceptance:** run complete unchanged Toolkit regression and operation conformance, then no-interactive-desktop and parallel-session tests, process/worker-loss tests, security boundary tests, and release evidence review.
 

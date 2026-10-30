@@ -1,8 +1,31 @@
 # Architecture maps
 
-These diagrams describe the proposed architecture. They do not show implemented data paths. Every runtime edge remains NOT_VERIFIED until tested with owned processes and retained evidence.
+The first diagram shows the current in-process logical integration. Diagrams 1-7 describe the planned native architecture, not working runtime edges. Solid arrows in a planned diagram do not imply implementation. Unit-test evidence and native/Toolkit acceptance remain distinct; see [testing.md](testing.md).
 
-## 1. Overall architecture
+## 0. CURRENT logical source path
+
+~~~mermaid
+flowchart LR
+  Caller["In-process caller"] -->|"scoped agent and session handle"| API["MSS_API authorization"]
+  Caller -->|"trusted owner creates, selects and closes logical records"| Core["MSS_Core logical registry"]
+  API --> Core
+  API -->|"authorized operation without executor"| Unsupported["Unsupported or pre-dispatch refusal"]
+  Caller --> Remote["MSS_Remote command shape gate"]
+  Remote --> API
+  Remote -->|"valid intent"| NotDispatched["NotDispatched - no app transport"]
+  Caller --> Frames["MSS_Render supplied-frame cache"]
+  Frames -->|"authorize exact owner"| API
+  Frames -->|"latest validated encoded bytes"| Caller
+  Core -->|"logical close result"| Cleanup["Owner-bound cache cleanup"]
+  Cleanup --> Frames
+  Desktop["MSS_Desktop illustrative shell"] -. "PLANNED API wiring" .-> API
+  Remote -. "PLANNED authenticated transport" .-> App["Owned Makepad process - NOT_IMPLEMENTED"]
+  App -. "PLANNED renderer producer" .-> Frames
+~~~
+
+These IDs separate registries within one process; they do not authenticate OS users, processes or network clients. The trusted host still owns/calls the registry directly; API exposes authorization/refusal rather than an implemented lifecycle server. Cancellation here is before admission, not cancellation of dispatched work. Supplied frame bytes and cache cleanup do not prove native capture or process/resource termination. The shared external business boundary remains the planned MSS_API executor; no MCP, Desktop, dispatcher or GOAL executor is connected to this path.
+
+## 1. PLANNED overall native architecture
 
 ~~~mermaid
 flowchart LR
@@ -28,7 +51,7 @@ flowchart LR
   Toolkit -. verification contract .-> WorkerB
 ~~~
 
-## 2. Desktop to Makepad command path
+## 2. PLANNED Desktop to Makepad command path
 
 ~~~mermaid
 sequenceDiagram
@@ -51,7 +74,7 @@ sequenceDiagram
   A-->>D: Result plus evidence reference
 ~~~
 
-## 3. Independent parallel sessions
+## 3. PLANNED independent parallel native sessions
 
 ~~~mermaid
 flowchart TB
@@ -81,7 +104,7 @@ flowchart TB
 
 Session-local IDs, process handles, control endpoints, artifact roots, and renderer generations must never be reused across sessions. Shared capacity limits may delay a job, but they must not merge ownership or state.
 
-## 4. Agent, application, and test process ownership
+## 4. PLANNED agent, application, and test process ownership
 
 ~~~mermaid
 flowchart LR
@@ -98,7 +121,7 @@ flowchart LR
 
 The agent may be externally managed. MSS owns only the application and test processes it starts and records.
 
-## 5. Frame delivery
+## 5. PLANNED native frame delivery
 
 ~~~mermaid
 sequenceDiagram
@@ -113,9 +136,9 @@ sequenceDiagram
   D->>D: Reject stale or mismatched session generation
 ~~~
 
-The source-inspected PNG readback and Linux hosted swapchain paths are candidates only. This transfer path has not been implemented.
+The source-inspected Makepad PNG readback and Linux hosted swapchain paths are candidates only. The current Render store validates and caches supplied encoded frames; it does not acquire a renderer frame, authenticate an app producer, transport GPU resources or display a frame in Desktop. This native transfer path is NOT_IMPLEMENTED and its acceptance is NOT_VERIFIED.
 
-## 6. Verification through Toolkit
+## 6. PLANNED verification through Toolkit
 
 ~~~mermaid
 sequenceDiagram
@@ -139,9 +162,9 @@ sequenceDiagram
   A-->>Caller: Report and evidence references
 ~~~
 
-An acknowledgement or a green compile cannot produce a PASS; the required postcondition and evidence must exist.
+An acknowledgement or a green compile cannot produce a PASS; the required postcondition and evidence must exist. No current MSS adapter implements this runner path or executes unchanged .aiui.json scenarios. Toolkit remains an external read-only contract baseline.
 
-## 7. Close and cleanup
+## 7. PLANNED native close and cleanup
 
 ~~~mermaid
 sequenceDiagram
@@ -163,4 +186,4 @@ sequenceDiagram
   A-->>C: Result with remaining owned identities
 ~~~
 
-If identity or release cannot be verified, the session remains cleanup-pending or quarantined. MSS must not terminate an unrelated process to make the diagram appear complete.
+The current Core close removes an owned logical record; Render can release its matching cache entry. Neither action executes this native process-close sequence. If native identity or release cannot be verified, the future session remains cleanup-pending or quarantined. MSS must not terminate an unrelated process to make the diagram appear complete.

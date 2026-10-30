@@ -3,6 +3,15 @@ name = "mss-render"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-
+[dependencies]
+mss-core = { path = "../MSS_Core" }
+mss-api = { path = "../MSS_API" }
+# Reviewed cached Makepad fork: MIT OR Apache-2.0 OR Zlib; no SDK vendoring.
+# Disabling defaults avoids SIMD and the optional std/fast-inflate path here.
+makepad-zune-png = { git = "https://github.com/makepad/makepad", rev = "130be1d0318adcf69453d925342607466353152c", default-features = false }
+makepad-zune-core = { git = "https://github.com/makepad/makepad", rev = "130be1d0318adcf69453d925342607466353152c", default-features = false }
+makepad-zune-inflate = { git = "https://github.com/makepad/makepad", rev = "130be1d0318adcf69453d925342607466353152c", default-features = false, features = ["zlib"] }
+[dev-dependencies]
+mss-remote = { path = "../MSS_Remote" }
 [lib]
 path = "src/lib.rs"
