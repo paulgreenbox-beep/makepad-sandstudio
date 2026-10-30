@@ -8,20 +8,21 @@ process and emits no receipts or `PASS` on stdout. Do not install this binary as
 the dispatcher policy's qualified `check-broker.exe`.
 
 The separate opt-in `native-probes` feature implements Windows supervisor
-primitives and an owner-controlled probe image. It is not connected to stdin
+primitives and separate owner-controlled child/supervisor fixture images. It is not connected to stdin
 requests. It must not be used to route model-provided code or argv into native
 execution. See [the design, actual results and 15-category coverage matrix](../doc/native-check-broker.md).
 
-At tested source `1a52fff0a894bdf19138ed1184c1d32b5ac94794`, required formatting,
+At tested source `0932ba368e7cdd5d21cee03609cd36b7a0fcb62f`, metadata, formatting,
 all-target checking and default tests passed: 17 protocol tests and three real
-production-refusal tests. Feature all-target checking passed, and the feature
-library tests passed 21 cases (17 protocol plus four real OS primitive tests).
-The complete native integration suite **failed**: one image-pin test passed,
-eight child-path tests failed behind station creation/secondary EOF blockers,
-and the network/symlink cases were `NOT_RUN` (two ignored prerequisites).
-Dispatcher compatibility tests passed 80 cases. See the
-[source-bound development evidence](evidence/20261030-development.json);
-none of these results qualifies production execution.
+production-refusal tests. Feature all-target checking and 24 feature library
+tests passed (17 protocol plus seven real OS primitive tests). The native
+integration suite passed all ten active tests; the network/symlink cases remain
+`NOT_RUN` (two existing ignored prerequisites). Dispatcher compatibility tests
+passed 80 cases. See [current source-bound evidence](evidence/20261030-station-fix.json).
+The earlier station error 183 / secondary EOF result (one passed, eight failed,
+two ignored at `1a52fff0a894bdf19138ed1184c1d32b5ac94794`) remains preserved in
+[historical development evidence](evidence/20261030-development.json).
+Neither result qualifies production execution or full OS isolation.
 
 ## Implemented boundary
 
@@ -29,21 +30,38 @@ none of these results qualifies production execution.
   binding to typed existing GOAL/catalog documents and a protected-context API.
 - Probe-only restricted token with low integrity; token facts are queried rather
   than inferred from creation flags.
-  Its RC/World/Users restricting SIDs are common SIDs, not per-session principals.
+  RC/World/Users restricting SIDs are retained with a fresh per-Run nonce SID.
+  Only the restricted token copy's DefaultDacl gains that nonce ACE for future
+  objects; existing ACEs, the source token and station/foreign ACLs remain unchanged.
+  A nonce marker is not an independently authenticated Windows identity.
   Synthetic ACL denials do not establish full neighboring-session isolation.
 - Image digest/file identity and held non-reparse image/ancestor handles.
 - Suspended process construction with explicit inherited handles, atomic Job
-  assignment, Win32k mitigation and a private noninteractive station/desktop.
-- Owned Job limits, bounded output, timeout/cancellation and owned-tree cleanup
-  logic. These implementation paths are not equivalent to successful child-process
-  integration tests.
+  assignment and observed Win32k mitigation. `DETACHED_PROCESS` avoids an extra
+  console host while retaining the selected standard handles. The restricted
+  child is separate from the supervisor and has no direct USER32/GDI32/WIN32U imports.
+- A unique owned private desktop in the unchanged current window station,
+  not a separate noninteractive station. Owner/nonce DACL and low label are read
+  back; collisions are refused, `UOI_IO` is false and controlled close is proved
+  by failed reopen. No station/desktop switching API or user Default desktop is used.
+- Actual child startup `lpDesktop` and Win32k policy are checked. A NULL
+  `GetThreadDesktop` query is recorded as unavailable (`child_connected_desktop`
+  and `child_desktop_query_win32`), with actual USER32 association `NOT_VERIFIED`.
+- Owned Job limits, real child file denials, inherited-handle exclusion,
+  environment filtering, descendants, timeout/cancellation, peer Job survival,
+  bounded output and controlled owned-tree/desktop cleanup. Supervisor-loss
+  tests prove verified-child termination, not crash-desktop disappearance.
 - A persistent create-new attempt-fence primitive. Its filesystem behavior does
   not authenticate the caller or qualify the future protected production journal.
 
-The observed child-launch probe currently refuses to reuse an existing system
-logon station (`ERROR_ALREADY_EXISTS`, 183). It does not fall back to the user
-desktop, an existing station, breakaway, elevation or a weaker token. Production
-execution remains blocked for additional source, identity and network reasons.
+The old create-only station blocker is resolved by creating only the owned
+desktop in the unchanged current station. The pre-main `0xC0000142` failure is
+resolved by the restricted copy's nonce DefaultDacl grant, without relaxing token
+or mitigation checks. No `SetProcessWindowStation`, `SetThreadDesktop` or
+`SwitchDesktop` call is used, and no existing station ACL is changed. Shared
+station globals and hostile same-user processes remain outside the qualified
+boundary. Production execution stays blocked for source, identity, profile,
+filesystem, network and receipt prerequisites.
 
 ## Checks
 
@@ -84,8 +102,9 @@ receipt authenticity are not qualified. The existing `mss-check-receipt-v1`
 format is unchanged, but this production entry point does not mint receipts.
 
 Restricted tokens and Jobs do not by themselves isolate filesystem, network,
-credentials or another session. Local kernel probes do not establish complete
-secret isolation or independent physical-runner qualification. No dispatcher,
+credentials or another session. Seven native primitive tests and ten active
+integration tests do not establish complete secret isolation, Toolkit parity or
+independent physical-runner qualification; these remain `NOT_VERIFIED`. No dispatcher,
 Secrets, `MSS_CODEX_ENABLE`, `main` protection or merge setting is enabled here.
 
 Dependencies: PR #5 (existing GOAL registry), PR #7 (disabled dispatcher), Issue #8.

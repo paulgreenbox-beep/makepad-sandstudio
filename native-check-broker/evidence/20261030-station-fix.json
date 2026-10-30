@@ -1,0 +1,610 @@
+{
+  "started_at": "2026-10-30T13:48:50.0997973Z",
+  "source_commit": "0932ba368e7cdd5d21cee03609cd36b7a0fcb62f",
+  "checks": [
+    {
+      "ended_at": "2026-10-30T13:48:50.346114Z",
+      "name": "fmt",
+      "result": "PASS",
+      "started_at": "2026-10-30T13:48:50.1129674Z",
+      "evidence_ref": "local-evidence:mss-broker-0932ba3-fmt.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "command": [
+        "cargo",
+        "fmt",
+        "--manifest-path",
+        "native-check-broker/Cargo.toml",
+        "--",
+        "--check"
+      ],
+      "exit_code": 0
+    },
+    {
+      "ended_at": "2026-10-30T13:48:50.422677Z",
+      "name": "metadata",
+      "result": "PASS",
+      "started_at": "2026-10-30T13:48:50.3582799Z",
+      "evidence_ref": "local-evidence:mss-broker-0932ba3-metadata.log",
+      "sha256": "f3bf42c3ec68c07182651b6da0ba6fd757f3b78c505dfdce5b290c23702c2d3c",
+      "command": [
+        "cargo",
+        "metadata",
+        "--manifest-path",
+        "native-check-broker/Cargo.toml",
+        "--no-deps",
+        "--format-version",
+        "1"
+      ],
+      "exit_code": 0
+    },
+    {
+      "ended_at": "2026-10-30T13:48:50.899082Z",
+      "name": "cargo-check",
+      "result": "PASS",
+      "started_at": "2026-10-30T13:48:50.42398Z",
+      "evidence_ref": "local-evidence:mss-broker-0932ba3-cargo-check.log",
+      "sha256": "596580a02e0cb4f752897631330b3638dd090a799383978452e5219eace4c4da",
+      "command": [
+        "cargo",
+        "check",
+        "--manifest-path",
+        "native-check-broker/Cargo.toml",
+        "--workspace",
+        "--all-targets"
+      ],
+      "exit_code": 0
+    },
+    {
+      "ended_at": "2026-10-30T13:48:53.1303977Z",
+      "name": "cargo-test",
+      "result": "PASS",
+      "started_at": "2026-10-30T13:48:50.9006037Z",
+      "evidence_ref": "local-evidence:mss-broker-0932ba3-cargo-test.log",
+      "sha256": "7aabbae0fbec0a4b8fd7b3aa7434c7fc71ef119d9ff8b863b4b3c0beb1c9a6af",
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "native-check-broker/Cargo.toml",
+        "--workspace"
+      ],
+      "exit_code": 0
+    },
+    {
+      "ended_at": "2026-10-30T13:48:53.9354404Z",
+      "name": "native-check",
+      "result": "PASS",
+      "started_at": "2026-10-30T13:48:53.1331416Z",
+      "evidence_ref": "local-evidence:mss-broker-0932ba3-native-check.log",
+      "sha256": "76567915c0d34620b0fa7e562c596db1d836591e92dc0afed2832e468c809c5e",
+      "command": [
+        "cargo",
+        "check",
+        "--manifest-path",
+        "native-check-broker/Cargo.toml",
+        "--workspace",
+        "--all-targets",
+        "--features",
+        "native-probes"
+      ],
+      "exit_code": 0
+    },
+    {
+      "ended_at": "2026-10-30T13:48:54.1263977Z",
+      "name": "native-lib",
+      "result": "PASS",
+      "started_at": "2026-10-30T13:48:53.9371567Z",
+      "evidence_ref": "local-evidence:mss-broker-0932ba3-native-lib.log",
+      "sha256": "ed438d845e8a01605a83a323c2ea2f92ff319e1389ebb54a3bc191671ff711f5",
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "native-check-broker/Cargo.toml",
+        "--features",
+        "native-probes",
+        "--lib",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0
+    },
+    {
+      "ended_at": "2026-10-30T13:48:57.7457821Z",
+      "name": "native-integration",
+      "result": "PASS",
+      "started_at": "2026-10-30T13:48:54.127769Z",
+      "evidence_ref": "local-evidence:mss-broker-0932ba3-native-integration.log",
+      "sha256": "2a8f7a0de4031eb34e8f2629b8834f22a8757ff5c71c62ff6e1c8f730dcf35b2",
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "native-check-broker/Cargo.toml",
+        "--features",
+        "native-probes",
+        "--test",
+        "native_windows",
+        "--",
+        "--test-threads=1",
+        "--nocapture"
+      ],
+      "exit_code": 0
+    },
+    {
+      "ended_at": "2026-10-30T13:48:58.557929Z",
+      "name": "dispatcher-compatibility",
+      "result": "PASS",
+      "started_at": "2026-10-30T13:48:57.7470189Z",
+      "evidence_ref": "local-evidence:mss-broker-0932ba3-dispatcher-compatibility.log",
+      "sha256": "5d6c995d77c719a063a3507d3e9e610cb81946e8d0e0867929295073f24925fb",
+      "command": [
+        "node",
+        "--test",
+        "scripts/codex-issue/test/dispatcher.test.mjs"
+      ],
+      "exit_code": 0
+    },
+    {
+      "ended_at": "2026-10-30T13:48:58.6410945Z",
+      "name": "dispatcher-disabled",
+      "result": "PASS",
+      "started_at": "2026-10-30T13:48:58.5590361Z",
+      "evidence_ref": "local-evidence:mss-broker-0932ba3-dispatcher-disabled.log",
+      "sha256": "f909efac8be82ea459fab6f2c096552e839563d8b9323960925b29eccffc98a5",
+      "command": [
+        "node",
+        "-e",
+        "const p=require(\"./.github/codex-issue-policy.json\");if(p.enabled!==false||p.isolation.approved!==false)process.exit(1);console.log(\"PASS: dispatcher disabled; isolation unapproved\");"
+      ],
+      "exit_code": 0
+    },
+    {
+      "ended_at": "2026-10-30T13:48:58.6892049Z",
+      "name": "diff",
+      "result": "PASS",
+      "started_at": "2026-10-30T13:48:58.6425428Z",
+      "evidence_ref": "local-evidence:mss-broker-0932ba3-diff.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "cargo_net_offline": true,
+  "ended_at": "2026-10-30T13:48:58.6899038Z",
+  "schema": "mss-broker-development-evidence-v1",
+  "source_baseline": "54df4dcb92bf022d318ac36455cfd73be223c2ac",
+  "dispatcher_baseline": "d83520d931ab000574c5c02192b9f49da86a34ea",
+  "historical_failure_ref": "20261030-development.json",
+  "environment": {
+    "physical_host_independent_qualification": "NOT_VERIFIED",
+    "rustc": "1.97.1 (8bab26f4f 2026-07-14)",
+    "administrator": false,
+    "cargo": "1.97.1 (c980f4866 2026-06-30)",
+    "cargo_net_offline": true,
+    "prior_hardware_snapshot": "20261030-development.json",
+    "build": 26300
+  },
+  "summary": {
+    "production_refusal_tests_passed": 3,
+    "feature_library_tests_passed": 24,
+    "native_integration_ignored_not_run": 2,
+    "real_native_primitive_tests_passed": 7,
+    "dispatcher_tests_passed": 80,
+    "protocol_tests_passed": 17,
+    "native_integration_passed": 10,
+    "native_integration_failed": 0
+  },
+  "test_cases": [
+    {
+      "suite": "cargo-test",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::exact_trusted_catalog_and_goal_binding_preserves_dispatcher_shape"
+    },
+    {
+      "suite": "cargo-test",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::constructed_requests_cannot_bypass_raw_parser_invariants"
+    },
+    {
+      "suite": "cargo-test",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::real_catalog_ids_are_supported_without_invented_aliases"
+    },
+    {
+      "suite": "cargo-test",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::real_null_command_catalog_entries_cannot_be_executed"
+    },
+    {
+      "suite": "cargo-test",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::rejects_duplicate_checks"
+    },
+    {
+      "suite": "cargo-test",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::rejects_duplicate_request_keys"
+    },
+    {
+      "suite": "cargo-test",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::rejects_metadata_tampering_manual_checks_and_shell_arguments"
+    },
+    {
+      "suite": "cargo-test",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::rejects_nested_duplicate_keys_and_oversized_input"
+    },
+    {
+      "suite": "cargo-test",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::rejects_shell_substitution"
+    },
+    {
+      "suite": "cargo-test",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::rejects_noncanonical_identifiers"
+    },
+    {
+      "suite": "cargo-test",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::rejects_stale_foreign_or_unindexed_binding"
+    },
+    {
+      "suite": "cargo-test",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::rejects_unknown_fields"
+    },
+    {
+      "suite": "cargo-test",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::rejects_unpinned_ref"
+    },
+    {
+      "suite": "cargo-test",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::required_check_set_and_policy_cannot_be_weakened"
+    },
+    {
+      "suite": "cargo-test",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::rejects_windows_path_aliases_without_claiming_filesystem_proof"
+    },
+    {
+      "suite": "cargo-test",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::typed_documents_reject_unknown_and_duplicate_fields"
+    },
+    {
+      "suite": "cargo-test",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::valid_shape_but_not_execution_authority"
+    },
+    {
+      "suite": "cargo-test",
+      "reason": null,
+      "result": "PASS",
+      "test": "oversized_input_is_refused_without_a_partial_receipt"
+    },
+    {
+      "suite": "cargo-test",
+      "reason": null,
+      "result": "PASS",
+      "test": "unknown_fields_and_argument_authority_are_rejected_without_receipts"
+    },
+    {
+      "suite": "cargo-test",
+      "reason": null,
+      "result": "PASS",
+      "test": "real_dispatcher_catalog_ids_parse_but_do_not_grant_execution"
+    },
+    {
+      "suite": "native-lib",
+      "reason": null,
+      "result": "PASS",
+      "test": "native::tests::consumed_attempt_is_denied_by_create_new_before_and_after_handle_loss"
+    },
+    {
+      "suite": "native-lib",
+      "reason": null,
+      "result": "PASS",
+      "test": "native::tests::effective_restricted_token_has_observed_privilege_and_integrity_limits"
+    },
+    {
+      "suite": "native-lib",
+      "reason": null,
+      "result": "PASS",
+      "test": "native::tests::existing_desktop_collision_is_refused_without_acl_changes"
+    },
+    {
+      "suite": "native-lib",
+      "reason": null,
+      "result": "PASS",
+      "test": "native::tests::job_limits_are_read_back_from_the_real_kernel_object"
+    },
+    {
+      "suite": "native-lib",
+      "reason": null,
+      "result": "PASS",
+      "test": "native::tests::nonce_default_dacl_preserves_source_and_existing_restrictions"
+    },
+    {
+      "suite": "native-lib",
+      "reason": null,
+      "result": "PASS",
+      "test": "native::tests::os_access_checks_deny_private_fixture_reads_and_writes_under_restricted_token"
+    },
+    {
+      "suite": "native-lib",
+      "reason": null,
+      "result": "PASS",
+      "test": "native::tests::private_desktop_is_noninput_owned_and_closed_without_changing_parent"
+    },
+    {
+      "suite": "native-lib",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::constructed_requests_cannot_bypass_raw_parser_invariants"
+    },
+    {
+      "suite": "native-lib",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::exact_trusted_catalog_and_goal_binding_preserves_dispatcher_shape"
+    },
+    {
+      "suite": "native-lib",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::real_catalog_ids_are_supported_without_invented_aliases"
+    },
+    {
+      "suite": "native-lib",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::real_null_command_catalog_entries_cannot_be_executed"
+    },
+    {
+      "suite": "native-lib",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::rejects_duplicate_checks"
+    },
+    {
+      "suite": "native-lib",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::rejects_duplicate_request_keys"
+    },
+    {
+      "suite": "native-lib",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::rejects_metadata_tampering_manual_checks_and_shell_arguments"
+    },
+    {
+      "suite": "native-lib",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::rejects_nested_duplicate_keys_and_oversized_input"
+    },
+    {
+      "suite": "native-lib",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::rejects_noncanonical_identifiers"
+    },
+    {
+      "suite": "native-lib",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::rejects_shell_substitution"
+    },
+    {
+      "suite": "native-lib",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::rejects_stale_foreign_or_unindexed_binding"
+    },
+    {
+      "suite": "native-lib",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::rejects_unknown_fields"
+    },
+    {
+      "suite": "native-lib",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::rejects_unpinned_ref"
+    },
+    {
+      "suite": "native-lib",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::rejects_windows_path_aliases_without_claiming_filesystem_proof"
+    },
+    {
+      "suite": "native-lib",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::required_check_set_and_policy_cannot_be_weakened"
+    },
+    {
+      "suite": "native-lib",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::typed_documents_reject_unknown_and_duplicate_fields"
+    },
+    {
+      "suite": "native-lib",
+      "reason": null,
+      "result": "PASS",
+      "test": "protocol::tests::valid_shape_but_not_execution_authority"
+    },
+    {
+      "suite": "native-integration",
+      "reason": null,
+      "result": "PASS",
+      "test": "bounded_output_is_marked_incomplete_instead_of_accepted"
+    },
+    {
+      "suite": "native-integration",
+      "reason": null,
+      "result": "PASS",
+      "test": "cancellation_does_not_terminate_a_simultaneous_unrelated_owned_job"
+    },
+    {
+      "suite": "native-integration",
+      "reason": null,
+      "result": "PASS",
+      "test": "descendant_outlives_primary_then_job_cleanup_is_verified"
+    },
+    {
+      "suite": "native-integration",
+      "reason": null,
+      "result": "PASS",
+      "test": "effective_restricted_token_and_job_are_observed_in_the_child"
+    },
+    {
+      "suite": "native-integration",
+      "reason": "NOT_RUN: requires local developer-mode symlink permission; no privilege is enabled automatically",
+      "result": "NOT_RUN",
+      "test": "image_ancestor_symlink_is_rejected_before_execution"
+    },
+    {
+      "suite": "native-integration",
+      "reason": null,
+      "result": "PASS",
+      "test": "image_digest_and_held_file_object_prevent_replacement"
+    },
+    {
+      "suite": "native-integration",
+      "reason": "NOT_RUN: requires separately provisioned and qualified WFP denial; no network boundary is supplied by token/Job",
+      "result": "NOT_RUN",
+      "test": "network_policy_denies_an_owned_listening_loopback_endpoint"
+    },
+    {
+      "suite": "native-integration",
+      "reason": null,
+      "result": "PASS",
+      "test": "os_denies_private_secret_sibling_reads_and_outside_write"
+    },
+    {
+      "suite": "native-integration",
+      "reason": null,
+      "result": "PASS",
+      "test": "supervisor_loss_closes_job_and_terminates_verified_child"
+    },
+    {
+      "suite": "native-integration",
+      "reason": null,
+      "result": "PASS",
+      "test": "synthetic_parent_secret_environment_and_profile_do_not_reach_child"
+    },
+    {
+      "suite": "native-integration",
+      "reason": null,
+      "result": "PASS",
+      "test": "timeout_and_cancellation_terminate_only_owned_job"
+    },
+    {
+      "suite": "native-integration",
+      "reason": null,
+      "result": "PASS",
+      "test": "unrelated_inheritable_secret_handle_is_not_passed_to_child"
+    }
+  ],
+  "probe_image_sha256": "4e8ad7bfaf49a0566f761c58e49159b64489edbcab35c11b495a1cbeaab1f1ff",
+  "supervisor_image_sha256": "9f8dac43d3a35f7d360cc93caf4d90af35f09f02e4a5a13fafd05a7fcc754add",
+  "production_image_sha256": "d36449045031e1e168cd8bceecc48779f58984c79ffd3388dbc76ca9281943bb",
+  "resolved_blocker": "Station183 avoided by fresh nonce-named owned desktop in unchanged current station. No CreateWindowStation/SetProcessWindowStation/SetThreadDesktop/SwitchDesktop path. Startup failure corrected by per-run nonce grant in copied token default DACL; detached children allocate no console host.",
+  "observed": {
+    "unrelated_inheritable_handle_exclusion": "PASS",
+    "private_desktop_not_input": "PASS",
+    "parent_desktop_and_station_owner_dacl_unchanged": "PASS",
+    "synthetic_parent_environment_exclusion": "PASS",
+    "bounded_output_incomplete": "PASS",
+    "child_startup_desktop_and_win32k": "PASS",
+    "copied_token_prior_aces_and_restricting_sids_preserved": "PASS",
+    "explicit_wait_desktop_close_and_absence": "PASS",
+    "native_fixture_execution": "PASS",
+    "supervisor_loss_child_death": "PASS",
+    "private_desktop_collision_refusal_without_acl_mutation": "PASS",
+    "restricted_token_source_dacl_unchanged": "PASS",
+    "private_desktop_owner_dacl_label_readback": "PASS",
+    "child_and_descendant_effective_token_and_job": "PASS",
+    "synthetic_private_file_denials": "PASS",
+    "descendant_cleanup": "PASS",
+    "owned_timeout_cancellation_and_peer_survival": "PASS",
+    "child_static_direct_gui_import_exclusion": "PASS"
+  },
+  "not_run": [
+    "WFP denial against owned listening endpoint: separately provisioned and qualified rules required",
+    "Symlink ancestor OS probe: separately approved developer-mode/symlink permission required"
+  ],
+  "unverified": [
+    "Actual child USER32 desktop connection: GetThreadDesktop NULL is unavailable observation, not proof of no connection; startup string is not association evidence",
+    "Desktop disappearance after supervisor crash; that probe proves only retained birth-bound child death",
+    "Authenticated production controller authority and protected replay journal",
+    "Protected exact-source object import and clean materializer",
+    "Distinct execution identity/profile and per-session filesystem/credential isolation",
+    "WFP IPv4/IPv6 network boundary",
+    "Production receipt/evidence authenticity",
+    "CPU/RAM exhaustion and full Job escape qualification",
+    "Independent physical Windows runner qualification",
+    "Full Rust Makepad Toolkit parity"
+  ],
+  "production_execution": "BLOCKED",
+  "full_native_qualification": "NOT_VERIFIED",
+  "limits": {
+    "user_desktop_input_or_switch": false,
+    "model_calls": 0,
+    "shared_station": "Current existing station is unchanged and may be WinSta0; separate station/global-atom/clipboard isolation is not claimed",
+    "isolation_approved": false,
+    "same_user_hostile_process_isolation": "NOT_VERIFIED",
+    "secrets_installed": false,
+    "replay_policy": "No unknown mutation was automatically retried",
+    "log_availability": "Raw logs remain local and may contain checkout paths. Public JSON contains exact command/result/time/hash and allowlisted test lines, not production receipts.",
+    "dispatcher_enabled": false,
+    "existing_station_or_foreign_acl_changes": false,
+    "owned_fixture_and_new_object_acls": true
+  },
+  "probe_direct_imports": [
+    "advapi32.dll",
+    "kernel32.dll",
+    "api-ms-win-core-synch-l1-2-0.dll",
+    "KERNEL32.dll",
+    "ntdll.dll",
+    "WS2_32.dll",
+    "VCRUNTIME140.dll",
+    "api-ms-win-crt-runtime-l1-1-0.dll",
+    "api-ms-win-crt-math-l1-1-0.dll",
+    "api-ms-win-crt-stdio-l1-1-0.dll",
+    "api-ms-win-crt-locale-l1-1-0.dll",
+    "api-ms-win-crt-heap-l1-1-0.dll"
+  ],
+  "probe_delay_import_directory_rva": 0
+}
