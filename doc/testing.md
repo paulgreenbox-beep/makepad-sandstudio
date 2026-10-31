@@ -1,5 +1,32 @@
 # Testing and Toolkit parity
 
+## Windows source-scope read identity (A00)
+
+Owner: the project-local `scripts/mss_scope.py` source guard; this is not a GUI,
+process-isolation or Toolkit execution backend. It covers `INV-SOURCE-01` and
+`INV-FS-01` / the source-read portion of `T-039` and `T-036`.
+
+CPython 3.14.6 on Windows can expose creation time as path `stat().st_ctime_ns`
+and metadata change time as descriptor `fstat().st_ctime_ns`. A stable pinned
+file may therefore have different cross-view ctime values. The guard compares
+device, inode, mode, link count, size, mtime and shared birthtime across Windows
+views; versions without birthtime retain the strict legacy ctime fallback.
+POSIX cross-view comparison remains unchanged. Within each view the full
+signature, including ctime, must remain stable before/after the read.
+
+The nine additional regressions in
+`scripts/tests/test_mss_scope_windows_identity.py` cover a real stable file after
+metadata update, mixed Windows views, all cross-view identity fields, strict
+legacy/POSIX behavior, path/descriptor ctime drift, foreign identity and metadata
+changes. All 37 original scope tests and their assertions are retained unchanged.
+Synthetic stat observations test the refusal contract; they are not OS isolation
+evidence. Actual results require exact-source execution receipts, not declarations.
+
+The Windows behavior is visible in the inspected CPython sources:
+[path stat](https://github.com/python/cpython/blob/v3.14.6/Modules/posixmodule.c#L2152)
+and [descriptor stat](https://github.com/python/cpython/blob/v3.14.6/Python/fileutils.c#L1037).
+No file-identity/ctime check, source pin or required native gate is removed.
+
 ## Status vocabulary
 
 | Status | Meaning |

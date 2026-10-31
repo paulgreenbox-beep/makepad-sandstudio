@@ -65,6 +65,23 @@ def decode(raw: bytes) -> dict:
     return value
 
 
+def _source_signature(info: os.stat_result, *, windows_cross_view: bool = False) -> tuple:
+    # Windows path stat preserves legacy creation-time ctime, while descriptor
+    # fstat may report metadata ChangeTime. Compare their shared birthtime only
+    # across views; pre-3.12 Windows retains its original creation-time fallback.
+    # Within either view, callers keep the complete ctime stability check.
+    timestamp = info.st_ctime_ns
+    if windows_cross_view:
+        timestamp = getattr(info, "st_birthtime_ns", timestamp)
+    identity = (info.st_dev, info.st_ino, info.st_mode, info.st_nlink,
+                info.st_size, info.st_mtime_ns, timestamp)
+    if windows_cross_view:
+        return identity
+    # A field used for cross-view identity must also remain stable within each
+    # observation view; retain birthtime in addition to the full ctime check.
+    return (*identity, getattr(info, "st_birthtime_ns", None))
+
+
 def read_regular(path: Path) -> bytes:
     """Bounded source read for an operator-owned tree, NOT an OS sandbox.
 
@@ -86,14 +103,15 @@ def read_regular(path: Path) -> bytes:
     descriptor = os.open(path, flags)
     with os.fdopen(descriptor, "rb") as stream:
         opened = os.fstat(stream.fileno())
-        def signature(info: os.stat_result) -> tuple:
-            return (info.st_dev, info.st_ino, info.st_mode, info.st_nlink,
-                    info.st_size, info.st_mtime_ns, info.st_ctime_ns)
-        require(signature(opened) == signature(before), "source changed before read")
+        cross_view = os.name == "nt"
+        require(_source_signature(opened, windows_cross_view=cross_view)
+                == _source_signature(before, windows_cross_view=cross_view),
+                "source changed before read")
         raw = stream.read(MAX_INPUT_BYTES + 1)
         require(len(raw) <= MAX_INPUT_BYTES, "planning input too large")
-        require(signature(os.fstat(stream.fileno())) == signature(before)
-                and signature(path.lstat()) == signature(before), "source changed during read")
+        require(_source_signature(os.fstat(stream.fileno())) == _source_signature(opened)
+                and _source_signature(path.lstat()) == _source_signature(before),
+                "source changed during read")
     return raw
 
 
