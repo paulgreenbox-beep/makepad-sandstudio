@@ -1,0 +1,25 @@
+/target/
+/reports/
+/artifacts/
+/local/
+/.deps/
+*.log
+*.png
+*.dmp
+.env
+.env.*
+!.env.example
+
+# Local SDK, built executables, profile pins, and verification evidence
+/makepad-work/
+/makepad-work-target/
+/build/
+/proof/
+/MSS_MCP/profiles/local.apps.json
+/.codex/
+__pycache__/
+*.py[cod]
+*.exe
+*.dll
+*.pdb
+*.aiui.json

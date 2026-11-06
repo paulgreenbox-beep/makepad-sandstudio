@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "application",
+  "admission": "BLOCKED",
+  "makepad_revision": "<exact Makepad source commit>",
+  "remote_supported": false,
+  "hidden_native_supported": false,
+  "app_executable": "C:\\<build>\\application.exe",
+  "app_sha256": "<application SHA-256>",
+  "remote_executable": "C:\\<build>\\makepad-remote.exe",
+  "remote_sha256": "<remote SHA-256>",
+  "working_directory": "C:\\<application-working-directory>",
+  "session_root": "C:\\<owned-session-root>",
+  "app_arguments": []
+}

@@ -1,0 +1,31 @@
+schema_version:
+    1
+id:
+    mss.api
+object_id:
+    mss.api
+kind:
+    component
+responsibility:
+    typed tool boundary
+level:
+    L1
+git_scope:
+    main
+isolation:
+    BOUNDED
+storage_state:
+    LIVE
+retention:
+    PERMANENT
+inputs:
+    approved session data and typed requests
+outputs:
+    scoped outcomes or source declarations
+depends_on:
+    mss.core
+effects:
+    native-only architecture no containers or virtual machines
+    no runtime PASS without independent evidence
+state:
+    SKLT
