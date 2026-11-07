@@ -66,7 +66,10 @@ provide OS isolation, descendant containment or supervisor-loss guarantees.
 
 Read-only `mss_server_info` returns the server PID/birth time, connection ID,
 version, optional startup Git HEAD metadata, capture timestamp, per-file SHA-256
-and aggregate SHA-256. It does not expose Remote secrets or document contents.
+and aggregate SHA-256. Separate protocol fields report the actual negotiated
+`initialize.protocolVersion`, supported versions and MCP `serverInfo.version`;
+they are not confused with the MSS package version. Negotiation does not change
+the frozen source manifest. It does not expose Remote secrets or document contents.
 
 At the actual stdio entry point, bytes of `mss_universal.py`, `mss_profiles.py`,
 `mss_builds.py`, `mss_process.py` and `mss_shared.py` are captured before local

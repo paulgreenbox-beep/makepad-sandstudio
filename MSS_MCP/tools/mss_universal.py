@@ -931,6 +931,7 @@ class Router:
         self.apps = {}
         self.closed_apps = {}
         self.initialized = False
+        self.mcp_protocol_version = None
         self.shared = None
         self.apps_lock = RLock()
         self.stopping = False
@@ -1285,7 +1286,11 @@ class Router:
         require(not getattr(self, "stopping", False) or name == "mss_close_app",
                 "CONNECTION_CLOSING", "This connection is closing.")
         if name == "mss_server_info":
-            return result_json(json.loads(json.dumps(self.runtime_info)))
+            return result_json(json.loads(json.dumps(self.runtime_info)) | {
+                "mcp_protocol_version": self.mcp_protocol_version,
+                "mcp_supported_protocol_versions": list(VERSIONS),
+                "mcp_server_version": "1.0.0",
+            })
         if name == "mss_recheck_cleanup":
             return result_json(self.recheck_cleanup(args["app_id"]))
         if name == "mss_list_instances":
@@ -1443,9 +1448,10 @@ class Router:
             return response | {"error": {"code": -32602, "message": "Invalid params"}}
         if method == "initialize":
             version = params.get("protocolVersion")
+            self.mcp_protocol_version = version if version in VERSIONS else VERSIONS[0]
             self.initialized = True
             return response | {"result": {
-                "protocolVersion": version if version in VERSIONS else VERSIONS[0],
+                "protocolVersion": self.mcp_protocol_version,
                 "serverInfo": {"name": "mss", "version": "1.0.0"}, "capabilities": {"tools": {}},
             }}
         if method == "ping":

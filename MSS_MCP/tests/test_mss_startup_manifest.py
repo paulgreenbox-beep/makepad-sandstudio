@@ -71,8 +71,9 @@ class StdioFixture:
             raise AssertionError(response)
         return response["result"]
 
-    def start(self):
-        self.rpc("initialize", {"protocolVersion": "2025-06-18", "capabilities": {}})
+    def start(self, protocol_version="2025-06-18"):
+        self.initialize_result = self.rpc(
+            "initialize", {"protocolVersion": protocol_version, "capabilities": {}})
         return self
 
     def tool(self, name):
@@ -142,6 +143,7 @@ class StartupManifestTests(unittest.TestCase):
         datetime.fromisoformat(info["server_started_utc"].replace("Z", "+00:00"))
         self.assertIn("mss_version", info)
         self.assertIn("mss_commit", info)
+        self.assertEqual(info["mcp_protocol_version"], server.initialize_result["protocolVersion"])
         snapshot = info["source_manifest"]
         self.assertIn("frozen", snapshot["capture_mode"].lower())
         datetime.fromisoformat(snapshot["captured_at_utc"].replace("Z", "+00:00"))
@@ -153,6 +155,16 @@ class StartupManifestTests(unittest.TestCase):
             self.assertEqual(saved["sha256"], self.start_hashes[name], name)
         self.assertTrue(snapshot["limitations"])
         return info
+
+    def test_protocol_identity_matches_actual_handshake_including_fallback(self):
+        for index, version in enumerate(("2025-06-18", "unsupported-test-version")):
+            with self.subTest(requested=version):
+                server = StdioFixture(self.repo, f"protocol-{index}")
+                self.addCleanup(server.close)
+                server.start(version)
+                info = self.manifest(server)
+                self.assertEqual(info["mcp_server_version"], server.initialize_result["serverInfo"]["version"])
+                self.assertIn(info["mcp_protocol_version"], info["mcp_supported_protocol_versions"])
 
     def test_manifest_identifies_running_process_and_frozen_sources_without_side_effects(self):
         server = self.server()
