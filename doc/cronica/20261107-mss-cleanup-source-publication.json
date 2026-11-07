@@ -741,7 +741,8 @@
     },
     {
       "check": "Prerequisite staged whitespace",
-      "exit_code": 2,
+      "exit_code": null,
+      "exit_code_capture": "NOT_RECORDED: the shell continued to the prerequisite commit; preserve the observed diagnostic only.",
       "result": "Existing extra blank line at router EOF; corrected in repair commit. Final whitespace check PASS."
     }
   ],
