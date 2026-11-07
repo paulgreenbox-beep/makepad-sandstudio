@@ -16,7 +16,7 @@
 
 MSS is intended to let independent AI agents work with separate Makepad applications at the same time. Each session is planned to own a distinct application process, control channel, test worker, render stream, state, and evidence directory. The native MSS desktop is planned as a tabbed workspace with session state on the left and the selected application's rendered view on the right.
 
-The published repository contains a seven-crate Rust workspace and a native Makepad Desktop shell. The Desktop currently renders an illustrative three-slot session sidebar and a no-frame placeholder; it is not connected to sessions, app capture, tests, or MSS_API. The other crates are architecture placeholders. No app lifecycle, addressed control, frame pipeline, test execution, MCP server, or sandbox is implemented or verified.
+The Rust workspace contains seven crates and a native Makepad Desktop shell. The Desktop renders an illustrative three-slot sidebar and a no-frame placeholder; it is not connected to sessions, app capture, tests, or MSS_API. The other Rust crates are architecture placeholders. A separately introduced [trusted-local Python MCP connector](MSS_MCP/README.md) wraps official Makepad Remote. Its lifecycle/source-identity checks do not establish the planned Rust runtime, live Desktop, OS sandbox or full Toolkit acceptance. See its [source-only scope and limitations](doc/mss-cleanup-source-identity.md).
 
 ## Non-negotiable constraints
 

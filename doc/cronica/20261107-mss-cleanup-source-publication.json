@@ -1,0 +1,769 @@
+{
+  "schema_version": 1,
+  "scope": "Source-only Draft PR; unmanaged development evidence, not a signed production receipt.",
+  "base_main_sha": "83ff50112fbbdc1cd2a43ccd2ac1650504394a67",
+  "source_commit_sha": "5b98f9d80b0cad1f689119d2ea0ddb37093130f0",
+  "prerequisite_commit_sha": "f746d309eb1f9ded82c4b4ab65fa9f44d321256f",
+  "cleanup_commit_sha": "6cca3dcc3faae72c6a0f77435084ec2a9f9b4b7e",
+  "runtime": {
+    "os": "Windows 11 AMD64",
+    "python": "CPython 3.12.14",
+    "powershell": "7.6.9"
+  },
+  "source_files_sha256": {
+    "MSS_MCP/tests/Test-RetainedProcessIdentity.ps1": "62940e92163b53b42779c6fcc7950d2a2dac2716bb94357199aae3a5a503df88",
+    "MSS_MCP/tests/gui_tools.rs": "b3090f2531cc3f87464d761e855f4e8a0afe0702d8a329b47f0f43c9a112e64e",
+    "MSS_MCP/tests/test_mss_builds.py": "eb6d91151452a3b371d3fbe04f44c3fd3e11b3df1463668b2777129cdea5a38d",
+    "MSS_MCP/tests/test_mss_catalog_runtime.py": "db6508daf0ce25446787bc2fb2e52742e9f2df951a05171b832be43b5c116905",
+    "MSS_MCP/tests/test_mss_cleanup.py": "31ac9202c2ed34f02c3af353134529fb4d4c68ce7b29e59b8aa42d298b306b26",
+    "MSS_MCP/tests/test_mss_shared_router.py": "cd0475b226f03116e986a4ee93a6a4bc0564e7f69f148fd77bd6bce145aaca66",
+    "MSS_MCP/tests/test_mss_shared_store.py": "dda75ceb98c7f5a350d9970c83ffd44b9a045544a854586e8ddfe14567bc7d6d",
+    "MSS_MCP/tests/test_mss_startup_manifest.py": "5448c2ec1fe22861cc271598460595a29b4b9838162f7ef97eb456239c7d1a79",
+    "MSS_MCP/tests/test_mss_transfer.py": "f541c4501a75812d35f23662d14adc51d5f9b70d9bedb70517d987b272999d37",
+    "MSS_MCP/tools/Start-MakepadMcp.ps1": "a9e5134f414946ac7ecec0f06bcc8f5c3e0178f7ebadded755f2e5a57515cbd4",
+    "MSS_MCP/tools/mss_builds.py": "fe1c48dba6d798d4ac3650a2da31cff3907f9bf70835e2624b89ea649599202f",
+    "MSS_MCP/tools/mss_process.py": "aae882ff344fdc2b93e1f11850933fea62d493a661b756bcd6188ef0398023fa",
+    "MSS_MCP/tools/mss_profiles.py": "0df0597a763036ddc358ab8fd015fa9413bacf388e2d84a08765a0a643313d68",
+    "MSS_MCP/tools/mss_shared.py": "87793563cb019f2eb836ce55628a36a7528bd5afe233d2441e14534d03273022",
+    "MSS_MCP/tools/mss_universal.py": "b512be499ebfcac74a2b0c8a775c4c7a7607f5a803852271fd9f37fef4dc8303"
+  },
+  "checks": [
+    {
+      "command": "python -B -m unittest discover -s MSS_MCP/tests -p 'test_mss_*.py' -v",
+      "source_sha": "5b98f9d80b0cad1f689119d2ea0ddb37093130f0",
+      "status": "PASS",
+      "exit_code": 0,
+      "tests": 118,
+      "failed": 0,
+      "skipped": 0,
+      "log_sha256": "f8d8b697aee36b6c35188394416fdf419b3ab51a962693f1756f0a874ece586d",
+      "environment": "Ordinary user, task-only TEMP/TMP, real filesystem hard-link negative, no Makepad/model."
+    },
+    {
+      "command": "pwsh -NoProfile -NonInteractive -File MSS_MCP/tests/Test-RetainedProcessIdentity.ps1 -Launcher <repo>/MSS_MCP/tools/Start-MakepadMcp.ps1 -EvidenceRoot <task-evidence>",
+      "status": "PASS",
+      "exit_code": 0,
+      "checks": 8,
+      "launcher_sha256": "a9e5134f414946ac7ecec0f06bcc8f5c3e0178f7ebadded755f2e5a57515cbd4",
+      "test_source_sha256": "62940e92163b53b42779c6fcc7950d2a2dac2716bb94357199aae3a5a503df88",
+      "log_sha256": "14b0b070f8cb92f2a18d6617432a3be1be06213282515cf8dda2b64519471fe1",
+      "raw_result_sha256": "62b45f9b81f3635e77739f08368c6ca49e50921f11b25a2ea7ebfb6f7d30f6b7",
+      "assertions": [
+        {
+          "status": "PASS",
+          "name": "current image queried through retained handle"
+        },
+        {
+          "status": "PASS",
+          "name": "own fast-exit fixture exited before image readiness check"
+        },
+        {
+          "status": "PASS",
+          "name": "exited fixture is not claimed image ready"
+        },
+        {
+          "status": "PASS",
+          "name": "unobserved image remains null"
+        },
+        {
+          "status": "PASS",
+          "name": "exit proof comes from same retained handle"
+        },
+        {
+          "status": "PASS",
+          "name": "PID and kernel birth preserved after exit"
+        },
+        {
+          "status": "PASS",
+          "name": "foreign or stale PID metadata rejected without signalling"
+        },
+        {
+          "status": "PASS",
+          "name": "repeated proof query is observational and idempotent"
+        }
+      ],
+      "fixture": {
+        "pid": 14628,
+        "birth_filetime": 134385219262663430,
+        "exit_code": 0,
+        "image": "operator-admitted PowerShell executable (private absolute path omitted)"
+      },
+      "evidence_level": "Own fast-exit PowerShell fixture only; production helper source extracted by AST; launcher source is identical in final commit."
+    },
+    {
+      "command": "cargo fmt -p mss-mcp -- --check",
+      "source_sha": "6cca3dcc3faae72c6a0f77435084ec2a9f9b4b7e",
+      "status": "PASS",
+      "exit_code": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "cargo test -p mss-mcp --test gui_tools --locked --offline -- --test-threads=1",
+      "source_sha": "6cca3dcc3faae72c6a0f77435084ec2a9f9b4b7e",
+      "status": "PASS",
+      "exit_code": 0,
+      "tests": 1,
+      "failed": 0,
+      "ignored": 0,
+      "log_sha256": "d6d95f260ed8ac7ba6386bca67cf9d9e87f25a7fe86c0d6955e902142fb97737",
+      "boundary": "Executed before protocol identity addition; final-code Rust/stdio rerun NOT_RUN. Python final suite covers the added protocol handshake."
+    },
+    {
+      "command": "cargo clippy -p mss-mcp --all-targets --locked --offline -- -D warnings",
+      "source_sha": "6cca3dcc3faae72c6a0f77435084ec2a9f9b4b7e",
+      "status": "PASS",
+      "exit_code": 0,
+      "log_sha256": "fb86155a1615d82cbd34344bd41c4b071ed66fc1f8f58830a415c4dac59c80ce"
+    },
+    {
+      "command": "Python AST parse (12 files), PowerShell Parser.ParseFile (2 files)",
+      "source_sha": "5b98f9d80b0cad1f689119d2ea0ddb37093130f0",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "command": "git diff 83ff50112fbbdc1cd2a43ccd2ac1650504394a67 HEAD --check",
+      "source_sha": "5b98f9d80b0cad1f689119d2ea0ddb37093130f0",
+      "status": "PASS",
+      "exit_code": 0
+    }
+  ],
+  "python_test_inventory": [
+    {
+      "test": "test_activation_requires_verification",
+      "qualified_test": "test_mss_builds.BuildRegistryTests.test_activation_requires_verification",
+      "status": "PASS"
+    },
+    {
+      "test": "test_alternate_stream_and_hard_link_cannot_register",
+      "qualified_test": "test_mss_builds.BuildRegistryTests.test_alternate_stream_and_hard_link_cannot_register",
+      "status": "PASS"
+    },
+    {
+      "test": "test_bad_active_executable_can_be_rolled_back_to_the_valid_baseline",
+      "qualified_test": "test_mss_builds.BuildRegistryTests.test_bad_active_executable_can_be_rolled_back_to_the_valid_baseline",
+      "status": "PASS"
+    },
+    {
+      "test": "test_baseline_does_not_require_admission_under_candidate_root",
+      "qualified_test": "test_mss_builds.BuildRegistryTests.test_baseline_does_not_require_admission_under_candidate_root",
+      "status": "PASS"
+    },
+    {
+      "test": "test_baseline_path_is_reserved_even_when_inside_an_approved_root",
+      "qualified_test": "test_mss_builds.BuildRegistryTests.test_baseline_path_is_reserved_even_when_inside_an_approved_root",
+      "status": "PASS"
+    },
+    {
+      "test": "test_candidate_drift_blocks_launch_and_activation",
+      "qualified_test": "test_mss_builds.BuildRegistryTests.test_candidate_drift_blocks_launch_and_activation",
+      "status": "PASS"
+    },
+    {
+      "test": "test_candidate_path_must_resolve_inside_the_approved_directory",
+      "qualified_test": "test_mss_builds.BuildRegistryTests.test_candidate_path_must_resolve_inside_the_approved_directory",
+      "status": "PASS"
+    },
+    {
+      "test": "test_concurrent_activation_allows_only_one_compare_and_swap",
+      "qualified_test": "test_mss_builds.BuildRegistryTests.test_concurrent_activation_allows_only_one_compare_and_swap",
+      "status": "PASS"
+    },
+    {
+      "test": "test_failed_rollback_leaves_the_current_build_active",
+      "qualified_test": "test_mss_builds.BuildRegistryTests.test_failed_rollback_leaves_the_current_build_active",
+      "status": "PASS"
+    },
+    {
+      "test": "test_invalid_saved_state_fails_closed_without_rewriting_it",
+      "qualified_test": "test_mss_builds.BuildRegistryTests.test_invalid_saved_state_fails_closed_without_rewriting_it",
+      "status": "PASS"
+    },
+    {
+      "test": "test_missing_executable_and_invalid_digest_refuse_registration",
+      "qualified_test": "test_mss_builds.BuildRegistryTests.test_missing_executable_and_invalid_digest_refuse_registration",
+      "status": "PASS"
+    },
+    {
+      "test": "test_persists_selection_between_registry_instances_and_rolls_back",
+      "qualified_test": "test_mss_builds.BuildRegistryTests.test_persists_selection_between_registry_instances_and_rolls_back",
+      "status": "PASS"
+    },
+    {
+      "test": "test_registered_path_cannot_be_reused_for_changed_bytes",
+      "qualified_test": "test_mss_builds.BuildRegistryTests.test_registered_path_cannot_be_reused_for_changed_bytes",
+      "status": "PASS"
+    },
+    {
+      "test": "test_registration_is_idempotent_and_does_not_activate",
+      "qualified_test": "test_mss_builds.BuildRegistryTests.test_registration_is_idempotent_and_does_not_activate",
+      "status": "PASS"
+    },
+    {
+      "test": "test_unknown_build_cannot_replace_baseline",
+      "qualified_test": "test_mss_builds.BuildRegistryTests.test_unknown_build_cannot_replace_baseline",
+      "status": "PASS"
+    },
+    {
+      "test": "test_wrong_executable_basename_cannot_register",
+      "qualified_test": "test_mss_builds.BuildRegistryTests.test_wrong_executable_basename_cannot_register",
+      "status": "PASS"
+    },
+    {
+      "test": "test_wrong_registration_digest_does_not_persist_candidate",
+      "qualified_test": "test_mss_builds.BuildRegistryTests.test_wrong_registration_digest_does_not_persist_candidate",
+      "status": "PASS"
+    },
+    {
+      "test": "test_existing_bundled_runtime_layout_remains_supported",
+      "qualified_test": "test_mss_catalog_runtime.CatalogRuntimeTests.test_existing_bundled_runtime_layout_remains_supported",
+      "status": "PASS"
+    },
+    {
+      "test": "test_explicit_operator_path_does_not_depend_on_python_layout",
+      "qualified_test": "test_mss_catalog_runtime.CatalogRuntimeTests.test_explicit_operator_path_does_not_depend_on_python_layout",
+      "status": "PASS"
+    },
+    {
+      "test": "test_missing_explicit_path_never_falls_back_to_path",
+      "qualified_test": "test_mss_catalog_runtime.CatalogRuntimeTests.test_missing_explicit_path_never_falls_back_to_path",
+      "status": "PASS"
+    },
+    {
+      "test": "test_modified_runtime_is_rejected_by_same_pin_check",
+      "qualified_test": "test_mss_catalog_runtime.CatalogRuntimeTests.test_modified_runtime_is_rejected_by_same_pin_check",
+      "status": "PASS"
+    },
+    {
+      "test": "test_relative_explicit_path_is_rejected",
+      "qualified_test": "test_mss_catalog_runtime.CatalogRuntimeTests.test_relative_explicit_path_is_rejected",
+      "status": "PASS"
+    },
+    {
+      "test": "test_access_denied_is_unknown_not_pid_absence",
+      "qualified_test": "test_mss_cleanup.ArchivedCleanupTests.test_access_denied_is_unknown_not_pid_absence",
+      "status": "PASS"
+    },
+    {
+      "test": "test_conflicting_archived_pid_refused_before_current_process_query",
+      "qualified_test": "test_mss_cleanup.ArchivedCleanupTests.test_conflicting_archived_pid_refused_before_current_process_query",
+      "status": "PASS"
+    },
+    {
+      "test": "test_current_original_process_contradicts_exit_receipt_and_is_not_signalled",
+      "qualified_test": "test_mss_cleanup.ArchivedCleanupTests.test_current_original_process_contradicts_exit_receipt_and_is_not_signalled",
+      "status": "PASS"
+    },
+    {
+      "test": "test_invalid_app_id_is_refused_before_process_query",
+      "qualified_test": "test_mss_cleanup.ArchivedCleanupTests.test_invalid_app_id_is_refused_before_process_query",
+      "status": "PASS"
+    },
+    {
+      "test": "test_missing_pid_and_proof_stays_pending_without_process_query",
+      "qualified_test": "test_mss_cleanup.ArchivedCleanupTests.test_missing_pid_and_proof_stays_pending_without_process_query",
+      "status": "PASS"
+    },
+    {
+      "test": "test_reused_pid_is_not_authority_over_replacement",
+      "qualified_test": "test_mss_cleanup.ArchivedCleanupTests.test_reused_pid_is_not_authority_over_replacement",
+      "status": "PASS"
+    },
+    {
+      "test": "test_terminal_archive_recheck_is_idempotent_and_preserves_originals",
+      "qualified_test": "test_mss_cleanup.ArchivedCleanupTests.test_terminal_archive_recheck_is_idempotent_and_preserves_originals",
+      "status": "PASS"
+    },
+    {
+      "test": "test_unreviewed_legacy_record_is_not_authorized_by_a_generic_old_source_copy",
+      "qualified_test": "test_mss_cleanup.ArchivedCleanupTests.test_unreviewed_legacy_record_is_not_authorized_by_a_generic_old_source_copy",
+      "status": "PASS"
+    },
+    {
+      "test": "test_closed_and_failed_closed_close_are_idempotent",
+      "qualified_test": "test_mss_cleanup.CleanupAppTests.test_closed_and_failed_closed_close_are_idempotent",
+      "status": "PASS"
+    },
+    {
+      "test": "test_failed_closed_is_terminal_and_keeps_process_identity",
+      "qualified_test": "test_mss_cleanup.CleanupAppTests.test_failed_closed_is_terminal_and_keeps_process_identity",
+      "status": "PASS"
+    },
+    {
+      "test": "test_failure_of_one_app_does_not_close_or_mutate_neighbor",
+      "qualified_test": "test_mss_cleanup.CleanupAppTests.test_failure_of_one_app_does_not_close_or_mutate_neighbor",
+      "status": "PASS"
+    },
+    {
+      "test": "test_lost_launcher_handle_after_attempt_remains_pending",
+      "qualified_test": "test_mss_cleanup.CleanupAppTests.test_lost_launcher_handle_after_attempt_remains_pending",
+      "status": "PASS"
+    },
+    {
+      "test": "test_new_lifecycle_metadata_does_not_widen_shared_registry_contract",
+      "qualified_test": "test_mss_cleanup.CleanupAppTests.test_new_lifecycle_metadata_does_not_widen_shared_registry_contract",
+      "status": "PASS"
+    },
+    {
+      "test": "test_no_launcher_attempt_is_explicit_evidence_not_inference_from_missing_pid",
+      "qualified_test": "test_mss_cleanup.CleanupAppTests.test_no_launcher_attempt_is_explicit_evidence_not_inference_from_missing_pid",
+      "status": "PASS"
+    },
+    {
+      "test": "test_ready_app_cannot_be_reclassified_as_cleanup",
+      "qualified_test": "test_mss_cleanup.CleanupAppTests.test_ready_app_cannot_be_reclassified_as_cleanup",
+      "status": "PASS"
+    },
+    {
+      "test": "test_recheck_reads_later_exit_proof_without_repeating_close",
+      "qualified_test": "test_mss_cleanup.CleanupAppTests.test_recheck_reads_later_exit_proof_without_repeating_close",
+      "status": "PASS"
+    },
+    {
+      "test": "test_router_startup_failure_is_not_a_successful_lifecycle_even_if_launcher_closed_normally",
+      "qualified_test": "test_mss_cleanup.CleanupAppTests.test_router_startup_failure_is_not_a_successful_lifecycle_even_if_launcher_closed_normally",
+      "status": "PASS"
+    },
+    {
+      "test": "test_unknown_failure_remains_pending_with_a_reason",
+      "qualified_test": "test_mss_cleanup.CleanupAppTests.test_unknown_failure_remains_pending_with_a_reason",
+      "status": "PASS"
+    },
+    {
+      "test": "test_missing_exit_proof_remains_pending_even_when_old_source_exists",
+      "qualified_test": "test_mss_cleanup.CleanupClassificationTests.test_missing_exit_proof_remains_pending_even_when_old_source_exists",
+      "status": "PASS"
+    },
+    {
+      "test": "test_missing_pid_cannot_be_closed_from_pid_absence",
+      "qualified_test": "test_mss_cleanup.CleanupClassificationTests.test_missing_pid_cannot_be_closed_from_pid_absence",
+      "status": "PASS"
+    },
+    {
+      "test": "test_modern_startup_failure_cannot_use_known_legacy_source_to_claim_closed",
+      "qualified_test": "test_mss_cleanup.CleanupClassificationTests.test_modern_startup_failure_cannot_use_known_legacy_source_to_claim_closed",
+      "status": "PASS"
+    },
+    {
+      "test": "test_ordinary_qualified_graceful_lifecycle_is_closed",
+      "qualified_test": "test_mss_cleanup.CleanupClassificationTests.test_ordinary_qualified_graceful_lifecycle_is_closed",
+      "status": "PASS"
+    },
+    {
+      "test": "test_process_exits_before_image_query_without_invented_image",
+      "qualified_test": "test_mss_cleanup.CleanupClassificationTests.test_process_exits_before_image_query_without_invented_image",
+      "status": "PASS"
+    },
+    {
+      "test": "test_startup_failure_with_bound_exit_is_failed_closed_even_exit_one",
+      "qualified_test": "test_mss_cleanup.CleanupClassificationTests.test_startup_failure_with_bound_exit_is_failed_closed_even_exit_one",
+      "status": "PASS"
+    },
+    {
+      "test": "test_successful_close_needs_observed_image_verification",
+      "qualified_test": "test_mss_cleanup.CleanupClassificationTests.test_successful_close_needs_observed_image_verification",
+      "status": "PASS"
+    },
+    {
+      "test": "test_unknown_exit_and_invalid_modern_binding_remain_pending",
+      "qualified_test": "test_mss_cleanup.CleanupClassificationTests.test_unknown_exit_and_invalid_modern_binding_remain_pending",
+      "status": "PASS"
+    },
+    {
+      "test": "test_detach_serializes_with_lazy_read_client_creation",
+      "qualified_test": "test_mss_shared_router.SharedRouterTests.test_detach_serializes_with_lazy_read_client_creation",
+      "status": "PASS"
+    },
+    {
+      "test": "test_participant_mutation_invalidates_owner_verification",
+      "qualified_test": "test_mss_shared_router.SharedRouterTests.test_participant_mutation_invalidates_owner_verification",
+      "status": "PASS"
+    },
+    {
+      "test": "test_private_candidate_fresh_verification_preserves_activation_contract",
+      "qualified_test": "test_mss_shared_router.SharedRouterTests.test_private_candidate_fresh_verification_preserves_activation_contract",
+      "status": "PASS"
+    },
+    {
+      "test": "test_revoked_participant_can_still_release_its_own_clients",
+      "qualified_test": "test_mss_shared_router.SharedRouterTests.test_revoked_participant_can_still_release_its_own_clients",
+      "status": "PASS"
+    },
+    {
+      "test": "test_running_mutation_cannot_be_claimed_as_verified",
+      "qualified_test": "test_mss_shared_router.SharedRouterTests.test_running_mutation_cannot_be_claimed_as_verified",
+      "status": "PASS"
+    },
+    {
+      "test": "test_shared_candidate_cannot_activate",
+      "qualified_test": "test_mss_shared_router.SharedRouterTests.test_shared_candidate_cannot_activate",
+      "status": "PASS"
+    },
+    {
+      "test": "test_sharing_transition_clears_candidate_evidence",
+      "qualified_test": "test_mss_shared_router.SharedRouterTests.test_sharing_transition_clears_candidate_evidence",
+      "status": "PASS"
+    },
+    {
+      "test": "test_unknown_shared_outcome_blocks_owner_activation",
+      "qualified_test": "test_mss_shared_router.SharedRouterTests.test_unknown_shared_outcome_blocks_owner_activation",
+      "status": "PASS"
+    },
+    {
+      "test": "test_actual_router_metadata_preserves_bindings_without_credentials",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_actual_router_metadata_preserves_bindings_without_credentials",
+      "status": "PASS"
+    },
+    {
+      "test": "test_app_id_cannot_be_republished_or_reopened",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_app_id_cannot_be_republished_or_reopened",
+      "status": "PASS"
+    },
+    {
+      "test": "test_build_activation_is_owner_only_and_serialized_after_shared_mutations",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_build_activation_is_owner_only_and_serialized_after_shared_mutations",
+      "status": "PASS"
+    },
+    {
+      "test": "test_connection_id_cannot_be_reused_for_different_birth",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_connection_id_cannot_be_reused_for_different_birth",
+      "status": "PASS"
+    },
+    {
+      "test": "test_control_attachment_participants_and_no_ownership_transfer",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_control_attachment_participants_and_no_ownership_transfer",
+      "status": "PASS"
+    },
+    {
+      "test": "test_control_revocation_during_running_does_not_promise_rollback",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_control_revocation_during_running_does_not_promise_rollback",
+      "status": "PASS"
+    },
+    {
+      "test": "test_dead_running_caller_is_unknown_and_dead_queued_caller_is_cancelled",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_dead_running_caller_is_unknown_and_dead_queued_caller_is_cancelled",
+      "status": "PASS"
+    },
+    {
+      "test": "test_deadline_cancels_queued_action_and_never_dispatches_later",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_deadline_cancels_queued_action_and_never_dispatches_later",
+      "status": "PASS"
+    },
+    {
+      "test": "test_detach_preserves_owner_and_cancels_only_members_queue",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_detach_preserves_owner_and_cancels_only_members_queue",
+      "status": "PASS"
+    },
+    {
+      "test": "test_distinct_connections_in_same_process_still_have_separate_permissions_and_fifo",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_distinct_connections_in_same_process_still_have_separate_permissions_and_fifo",
+      "status": "PASS"
+    },
+    {
+      "test": "test_downgrade_and_revoke_cancel_pending_work",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_downgrade_and_revoke_cancel_pending_work",
+      "status": "PASS"
+    },
+    {
+      "test": "test_failed_action_does_not_quarantine_and_raw_ack_is_not_verified",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_failed_action_does_not_quarantine_and_raw_ack_is_not_verified",
+      "status": "PASS"
+    },
+    {
+      "test": "test_fifo_between_two_connections_and_distinct_operation_ids",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_fifo_between_two_connections_and_distinct_operation_ids",
+      "status": "PASS"
+    },
+    {
+      "test": "test_journal_is_bounded_and_does_not_store_command_arguments",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_journal_is_bounded_and_does_not_store_command_arguments",
+      "status": "PASS"
+    },
+    {
+      "test": "test_missing_clock_marker_cancels_legacy_queued_tickets_but_keeps_running_receipt",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_missing_clock_marker_cancels_legacy_queued_tickets_but_keeps_running_receipt",
+      "status": "PASS"
+    },
+    {
+      "test": "test_only_queued_actions_can_be_cancelled",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_only_queued_actions_can_be_cancelled",
+      "status": "PASS"
+    },
+    {
+      "test": "test_operation_lookup_cannot_cross_app_boundary",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_operation_lookup_cannot_cross_app_boundary",
+      "status": "PASS"
+    },
+    {
+      "test": "test_other_app_dispatches_while_first_has_running_and_queued_work",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_other_app_dispatches_while_first_has_running_and_queued_work",
+      "status": "PASS"
+    },
+    {
+      "test": "test_other_participant_cannot_cancel_or_finish_operation",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_other_participant_cannot_cancel_or_finish_operation",
+      "status": "PASS"
+    },
+    {
+      "test": "test_other_windows_session_cannot_attach",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_other_windows_session_cannot_attach",
+      "status": "PASS"
+    },
+    {
+      "test": "test_owner_can_close_quarantined_app_but_control_member_cannot",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_owner_can_close_quarantined_app_but_control_member_cannot",
+      "status": "PASS"
+    },
+    {
+      "test": "test_owner_pid_reuse_blocks_attach_and_dispatch",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_owner_pid_reuse_blocks_attach_and_dispatch",
+      "status": "PASS"
+    },
+    {
+      "test": "test_private_app_id_alone_confers_no_access",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_private_app_id_alone_confers_no_access",
+      "status": "PASS"
+    },
+    {
+      "test": "test_private_revocation_keeps_inflight_receipt_but_blocks_further_access",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_private_revocation_keeps_inflight_receipt_but_blocks_further_access",
+      "status": "PASS"
+    },
+    {
+      "test": "test_queue_capacity_counts_pending_and_returns_queue_full",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_queue_capacity_counts_pending_and_returns_queue_full",
+      "status": "PASS"
+    },
+    {
+      "test": "test_read_attachment_cannot_control_close_or_share",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_read_attachment_cannot_control_close_or_share",
+      "status": "PASS"
+    },
+    {
+      "test": "test_retiring_owner_marks_unclosed_apps_lost_but_keeps_closed_receipt",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_retiring_owner_marks_unclosed_apps_lost_but_keeps_closed_receipt",
+      "status": "PASS"
+    },
+    {
+      "test": "test_retiring_participant_never_closes_owners_app",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_retiring_participant_never_closes_owners_app",
+      "status": "PASS"
+    },
+    {
+      "test": "test_revoked_running_caller_crash_is_unknown_without_retry",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_revoked_running_caller_crash_is_unknown_without_retry",
+      "status": "PASS"
+    },
+    {
+      "test": "test_shutdown_cancels_only_own_queued_non_close_work_and_retains_cleanup_authority",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_shutdown_cancels_only_own_queued_non_close_work_and_retains_cleanup_authority",
+      "status": "PASS"
+    },
+    {
+      "test": "test_shutdown_cancels_queued_activation_and_preserves_only_owner_close",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_shutdown_cancels_queued_activation_and_preserves_only_owner_close",
+      "status": "PASS"
+    },
+    {
+      "test": "test_transfer_is_target_queued_and_source_has_no_nested_ticket",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_transfer_is_target_queued_and_source_has_no_nested_ticket",
+      "status": "PASS"
+    },
+    {
+      "test": "test_unknown_blocks_build_activation_but_still_allows_owner_close",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_unknown_blocks_build_activation_but_still_allows_owner_close",
+      "status": "PASS"
+    },
+    {
+      "test": "test_unknown_result_quarantines_without_replay",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_unknown_result_quarantines_without_replay",
+      "status": "PASS"
+    },
+    {
+      "test": "test_wall_clock_rollback_cannot_extend_monotonic_queue_deadline",
+      "qualified_test": "test_mss_shared_store.SharedStoreTests.test_wall_clock_rollback_cannot_extend_monotonic_queue_deadline",
+      "status": "PASS"
+    },
+    {
+      "test": "test_disk_edits_after_start_never_replace_manifest_of_running_code",
+      "qualified_test": "test_mss_startup_manifest.StartupManifestTests.test_disk_edits_after_start_never_replace_manifest_of_running_code",
+      "status": "PASS"
+    },
+    {
+      "test": "test_independent_connections_have_distinct_process_and_connection_identity",
+      "qualified_test": "test_mss_startup_manifest.StartupManifestTests.test_independent_connections_have_distinct_process_and_connection_identity",
+      "status": "PASS"
+    },
+    {
+      "test": "test_manifest_identifies_running_process_and_frozen_sources_without_side_effects",
+      "qualified_test": "test_mss_startup_manifest.StartupManifestTests.test_manifest_identifies_running_process_and_frozen_sources_without_side_effects",
+      "status": "PASS"
+    },
+    {
+      "test": "test_protocol_identity_matches_actual_handshake_including_fallback",
+      "qualified_test": "test_mss_startup_manifest.StartupManifestTests.test_protocol_identity_matches_actual_handshake_including_fallback",
+      "status": "PASS"
+    },
+    {
+      "test": "test_client_cannot_supply_fragment_payload",
+      "qualified_test": "test_mss_transfer.TransferTests.test_client_cannot_supply_fragment_payload",
+      "status": "PASS"
+    },
+    {
+      "test": "test_deeply_nested_target_json_marks_uncertain_and_never_replays",
+      "qualified_test": "test_mss_transfer.TransferTests.test_deeply_nested_target_json_marks_uncertain_and_never_replays",
+      "status": "PASS"
+    },
+    {
+      "test": "test_explicit_destination_refusal_does_not_freeze_app_or_retry",
+      "qualified_test": "test_mss_transfer.TransferTests.test_explicit_destination_refusal_does_not_freeze_app_or_retry",
+      "status": "PASS"
+    },
+    {
+      "test": "test_explicit_source_refusal_does_not_reach_target",
+      "qualified_test": "test_mss_transfer.TransferTests.test_explicit_source_refusal_does_not_reach_target",
+      "status": "PASS"
+    },
+    {
+      "test": "test_export_transport_loss_never_writes_target",
+      "qualified_test": "test_mss_transfer.TransferTests.test_export_transport_loss_never_writes_target",
+      "status": "PASS"
+    },
+    {
+      "test": "test_incompatible_format_is_refused_before_export",
+      "qualified_test": "test_mss_transfer.TransferTests.test_incompatible_format_is_refused_before_export",
+      "status": "PASS"
+    },
+    {
+      "test": "test_incompatible_makepad_revision_is_refused_before_export",
+      "qualified_test": "test_mss_transfer.TransferTests.test_incompatible_makepad_revision_is_refused_before_export",
+      "status": "PASS"
+    },
+    {
+      "test": "test_incompatible_profile_is_refused_before_export",
+      "qualified_test": "test_mss_transfer.TransferTests.test_incompatible_profile_is_refused_before_export",
+      "status": "PASS"
+    },
+    {
+      "test": "test_malformed_exports_do_not_reach_target",
+      "qualified_test": "test_mss_transfer.TransferTests.test_malformed_exports_do_not_reach_target",
+      "status": "PASS"
+    },
+    {
+      "test": "test_malformed_target_response_marks_uncertain_and_never_replays",
+      "qualified_test": "test_mss_transfer.TransferTests.test_malformed_target_response_marks_uncertain_and_never_replays",
+      "status": "PASS"
+    },
+    {
+      "test": "test_missing_native_capability_is_refused_before_export",
+      "qualified_test": "test_mss_transfer.TransferTests.test_missing_native_capability_is_refused_before_export",
+      "status": "PASS"
+    },
+    {
+      "test": "test_missing_ownership_receipt_is_refused_before_export",
+      "qualified_test": "test_mss_transfer.TransferTests.test_missing_ownership_receipt_is_refused_before_export",
+      "status": "PASS"
+    },
+    {
+      "test": "test_oversize_escaped_transport_does_not_reach_target",
+      "qualified_test": "test_mss_transfer.TransferTests.test_oversize_escaped_transport_does_not_reach_target",
+      "status": "PASS"
+    },
+    {
+      "test": "test_oversize_utf8_export_does_not_reach_target",
+      "qualified_test": "test_mss_transfer.TransferTests.test_oversize_utf8_export_does_not_reach_target",
+      "status": "PASS"
+    },
+    {
+      "test": "test_read_only_target_is_refused_before_export",
+      "qualified_test": "test_mss_transfer.TransferTests.test_read_only_target_is_refused_before_export",
+      "status": "PASS"
+    },
+    {
+      "test": "test_same_app_is_refused_before_export",
+      "qualified_test": "test_mss_transfer.TransferTests.test_same_app_is_refused_before_export",
+      "status": "PASS"
+    },
+    {
+      "test": "test_target_readback_mismatch_marks_uncertain_and_never_replays",
+      "qualified_test": "test_mss_transfer.TransferTests.test_target_readback_mismatch_marks_uncertain_and_never_replays",
+      "status": "PASS"
+    },
+    {
+      "test": "test_target_timeout_marks_uncertain_and_never_replays",
+      "qualified_test": "test_mss_transfer.TransferTests.test_target_timeout_marks_uncertain_and_never_replays",
+      "status": "PASS"
+    },
+    {
+      "test": "test_target_transport_error_is_sanitized_and_never_replayed",
+      "qualified_test": "test_mss_transfer.TransferTests.test_target_transport_error_is_sanitized_and_never_replayed",
+      "status": "PASS"
+    },
+    {
+      "test": "test_two_app_ids_for_one_pid_are_refused_before_export",
+      "qualified_test": "test_mss_transfer.TransferTests.test_two_app_ids_for_one_pid_are_refused_before_export",
+      "status": "PASS"
+    },
+    {
+      "test": "test_unknown_source_or_target_is_refused_before_export",
+      "qualified_test": "test_mss_transfer.TransferTests.test_unknown_source_or_target_is_refused_before_export",
+      "status": "PASS"
+    },
+    {
+      "test": "test_untyped_destination_refusal_marks_uncertain_and_never_replays",
+      "qualified_test": "test_mss_transfer.TransferTests.test_untyped_destination_refusal_marks_uncertain_and_never_replays",
+      "status": "PASS"
+    },
+    {
+      "test": "test_valid_transfer_sends_one_typed_fragment_and_returns_only_metadata",
+      "qualified_test": "test_mss_transfer.TransferTests.test_valid_transfer_sends_one_typed_fragment_and_returns_only_metadata",
+      "status": "PASS"
+    }
+  ],
+  "preserved_original_test_files": [
+    "test_mss_builds.py",
+    "test_mss_shared_router.py",
+    "test_mss_shared_store.py",
+    "test_mss_transfer.py"
+  ],
+  "historical_failures_preserved": [
+    {
+      "check": "Initial Python run with restricted default TEMP",
+      "exit_code": 1,
+      "result": "117 discovered; 202 setup/teardown errors including WinError 5; not a PASS.",
+      "log_sha256": "030895ac9658388ec3407fd772215d96406ccbb08cf591379b2b9e0f18a1a44d"
+    },
+    {
+      "check": "Task TEMP under restricted execution",
+      "exit_code": 1,
+      "result": "117 discovered; 116 passed; real hard-link creation denied with WinError 5. Assertion not skipped or mocked.",
+      "log_sha256": "a921041222aafad4f3afb7a7e3186d55c2b6819ed16b21e574ae4bf1f3e8b828"
+    },
+    {
+      "check": "Prerequisite staged whitespace",
+      "exit_code": null,
+      "exit_code_capture": "NOT_RECORDED: the shell continued to the prerequisite commit; preserve the observed diagnostic only.",
+      "result": "Existing extra blank line at router EOF; corrected in repair commit. Final whitespace check PASS."
+    }
+  ],
+  "private_data_omitted": [
+    "Live profiles/pins",
+    "App/Remote/SDK binaries",
+    "Documents/PNG/receipts",
+    "Codex configuration",
+    "One-off historical migration allowlist and identifiers",
+    "Live/model harnesses and raw host-path logs"
+  ],
+  "not_run_or_not_verified": {
+    "final_commit_rust_stdio_rerun": "NOT_RUN: Cargo/native queue reserved by coordinator after protocol addition; earlier exact Rust result retained separately.",
+    "full_workspace_builds": "NOT_RUN: no Rust production/manifests/lockfile changed; bounded owning-crate checks only.",
+    "live_profiles_and_full_launcher_remote_lifecycle": "NOT_RUN in source-only publication.",
+    "native_makepad_gui_gpu_and_toolkit_parity": "NOT_VERIFIED",
+    "signed_receipts_os_isolation_descendant_supervisor_loss": "NOT_VERIFIED",
+    "mss_api_delegation": "NOT_IMPLEMENTED: transitional Python connector documented.",
+    "unreviewed_legacy_cleanup": "CLEANUP_PENDING by design; no public legacy migration authority."
+  },
+  "no_live_install_or_reconnect": true,
+  "no_dispatcher_activation_or_model_call": true,
+  "no_merge_force_push_or_upstream_change": true
+}

@@ -9,3 +9,9 @@
 .env
 .env.*
 !.env.example
+/proof/
+/makepad-work/
+/makepad-work-target/
+/MSS_MCP/profiles/local.*
+__pycache__/
+*.pyc

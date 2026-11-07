@@ -1,5 +1,14 @@
 # Compatibility and source research
 
+## Source-only connector follow-up
+
+The Python connector uses only the Python standard library, native Windows APIs
+and PowerShell 7.4+. It wraps separately operator-pinned app/official Makepad
+Remote executables; this PR ships no binaries, Makepad SDK or application
+profile pins. No declared Cargo dependency, lockfile or research baseline below
+changes. Local policy/stdio tests do not establish runtime compatibility with
+any Makepad revision. See [the bounded verification protocol](mss-cleanup-source-identity.md).
+
 ## How to read this file
 
 The commit SHAs below identify source snapshots inspected for architecture on **2026-10-30**. They are not Cargo dependencies, do not imply functional compatibility, and must be refreshed before implementation. NOT_VERIFIED means there is no accepted cross-version proof.

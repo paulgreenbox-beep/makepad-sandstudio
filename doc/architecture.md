@@ -2,6 +2,13 @@
 
 ## Scope and state
 
+Source-only follow-up: `MSS_MCP/tools` publishes the pre-existing trusted-local
+Windows connector and a failed-launch/source-identity repair. It wraps official
+Makepad Remote and currently orchestrates policy in Python, without calling
+MSS_API. This is a documented transitional boundary, not an implementation of
+the Rust architecture below. See [the exact scope](mss-cleanup-source-identity.md).
+The original scaffold description and planned responsibilities follow.
+
 MSS is an architecture seed with a seven-crate workspace and a GUI-only Makepad Desktop shell. The six non-Desktop libraries report NOT_IMPLEMENTED; the Desktop source renders illustrative session rows and a no-frame placeholder. There is no session runtime, process supervisor, app control channel, app frame pipeline, SDK producer, MCP server, or automated test execution. Module names and diagrams describe intended ownership only.
 
 ## Responsibilities
