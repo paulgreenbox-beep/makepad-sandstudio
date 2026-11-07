@@ -398,6 +398,8 @@ def validate(name, args):
     if "queue_timeout_ms" in args:
         require(1 <= args["queue_timeout_ms"] <= 30000,
                 "INVALID_ARGUMENT", "queue_timeout_ms must be 1–30000; only limits time before dispatch.")
+    if "if_user_seq" in args:
+        require(args["if_user_seq"] >= 0, "INVALID_ARGUMENT", "Activity sequence must be nonnegative.")
     if "n" in args:
         require(1 <= args["n"] <= 500, "INVALID_ARGUMENT", "n must be 1–500.")
     if "scale" in args:
@@ -683,6 +685,23 @@ class App:
                    and any(node["id"] == args["node"] for node in window["nodes"])
                    for window in tree["trees"])
 
+    def preflight_user_seq(self, args, peer):
+        """Read only. This observation never replaces Makepad's dispatch guard."""
+        refusal = {"action_dispatched": False, "effect": "NOT_DISPATCHED"}
+        if "ui__activity" not in self.native_tools:
+            return result_json(refusal | {"code": "REFUSED_ACTIVITY_UNAVAILABLE"}, error=True)
+        try:
+            activity = native_json(peer.call("ui__activity", {}))
+        except (ToolFailure, TransportFailure, AttributeError, KeyError, TypeError, ValueError, RecursionError):
+            activity = None
+        actual = activity.get("user_seq") if isinstance(activity, dict) else None
+        if type(actual) is not int or not 0 <= actual < 2**64:
+            return result_json(refusal | {"code": "REFUSED_ACTIVITY_UNAVAILABLE"}, error=True)
+        if actual != args["if_user_seq"]:
+            return result_json(refusal | {"code": "REFUSED_STALE_USER_SEQ",
+                "expected_user_seq": args["if_user_seq"], "observed_user_seq": actual}, error=True)
+        return None
+
     def input_target(self, name, args):
         status = native_json(self.peer.call("ui__status", {}))
         require(isinstance(status, dict) and status.get("pid") == self.identity["app_pid"],
@@ -757,6 +776,10 @@ class App:
                 else:
                     self.action_target(name, args)
                     args.setdefault("json", True)
+                if "if_user_seq" in args:
+                    refusal = self.preflight_user_seq(args, peer or self.peer)
+                    if refusal is not None:
+                        return refusal
             if name == "mss_ui_type":
                 args.update(action="replace_text", wait=True)
             if name == "mss_ui_tree":

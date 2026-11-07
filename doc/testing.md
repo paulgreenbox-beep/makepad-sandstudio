@@ -1,5 +1,14 @@
 # Testing and Toolkit parity
 
+## Explicit user-sequence preflight follow-up
+
+| Contract | Owner | Check | Evidence level |
+| --- | --- | --- | --- |
+| Explicit stale sequence refuses before mutation; unavailable activity is not zero; native guard and unknown outcomes preserved | MSS_MCP router | `test_mss_user_seq.py` | Model-free Router/App dispatch fixtures; live replay NOT_RUN |
+
+See [contract, pinned upstream sources and invariant/test mapping](mss-user-sequence-preflight.md).
+The source-only check does not establish native GUI or full Toolkit acceptance.
+
 ## Source-only MCP lifecycle follow-up
 
 The original scaffold results below remain historical. The Python connector is
