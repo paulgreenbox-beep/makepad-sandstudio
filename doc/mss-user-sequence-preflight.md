@@ -103,3 +103,6 @@ verification and are not promoted to acceptance here. Native Makepad replay of
 this exact change remains `NOT_RUN`; GUI/Toolkit/security qualification remains
 `NOT_VERIFIED`. No Cargo/native/model run, software installation, upstream edit,
 live MCP restart, profile activation, automatic merge or force push is needed.
+
+Exact source, RED/GREEN log hashes and named tests are recorded in
+[the development evidence](cronica/20261107-mss-user-sequence-preflight.json).

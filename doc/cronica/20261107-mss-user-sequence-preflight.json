@@ -1,0 +1,223 @@
+{
+  "schema_version": 1,
+  "scope": "Source-only stacked Draft PR C; unmanaged development evidence, not production/native acceptance.",
+  "base_pr": 15,
+  "base_sha": "68ce7287347d9d82ca009b3f88559afc2718454f",
+  "tested_source_sha": "0bdc639b34c09d013b2187a70c06541f15e882f9",
+  "main_snapshot": "83ff50112fbbdc1cd2a43ccd2ac1650504394a67",
+  "source_sha256": {
+    "MSS_MCP/tools/mss_universal.py": "9067bf3baa94fe340872ae2de0431a8bdf4fac856b628a9c35c9966585d2136a",
+    "MSS_MCP/tests/test_mss_user_seq.py": "6599d2362eef3344fa81a25b3406f9c36610ddf6ad5d45ebf1a89503be77c7e5"
+  },
+  "existing_test_files_byte_identical": {
+    "MSS_MCP/tests/Test-RetainedProcessIdentity.ps1": "62940e92163b53b42779c6fcc7950d2a2dac2716bb94357199aae3a5a503df88",
+    "MSS_MCP/tests/gui_tools.rs": "b3090f2531cc3f87464d761e855f4e8a0afe0702d8a329b47f0f43c9a112e64e",
+    "MSS_MCP/tests/test_mss_builds.py": "eb6d91151452a3b371d3fbe04f44c3fd3e11b3df1463668b2777129cdea5a38d",
+    "MSS_MCP/tests/test_mss_catalog_runtime.py": "db6508daf0ce25446787bc2fb2e52742e9f2df951a05171b832be43b5c116905",
+    "MSS_MCP/tests/test_mss_cleanup.py": "31ac9202c2ed34f02c3af353134529fb4d4c68ce7b29e59b8aa42d298b306b26",
+    "MSS_MCP/tests/test_mss_shared_router.py": "cd0475b226f03116e986a4ee93a6a4bc0564e7f69f148fd77bd6bce145aaca66",
+    "MSS_MCP/tests/test_mss_shared_store.py": "dda75ceb98c7f5a350d9970c83ffd44b9a045544a854586e8ddfe14567bc7d6d",
+    "MSS_MCP/tests/test_mss_startup_manifest.py": "5448c2ec1fe22861cc271598460595a29b4b9838162f7ef97eb456239c7d1a79",
+    "MSS_MCP/tests/test_mss_transfer.py": "f541c4501a75812d35f23662d14adc51d5f9b70d9bedb70517d987b272999d37"
+  },
+  "makepad_source_revision": "2271c0eb350cedd497c84373f17ad2b0b662cb72",
+  "makepad_normalized_lf_pins": {
+    "platform/hal/src/a11y/remote.rs": "0fa159f68a2c0f455e8baa100a666914bb9a3a4d798c098e6377d0b0a981d6a8",
+    "platform/src/remote_activity.rs": "e194453cd97186db266f02bfdefa09d3908a9701023baf9ba05fcbde279fa995",
+    "platform/src/remote.rs": "41bbe0f74121cbfeef87e1454d441145c5f69c723ccf72a33642d380a6734fc0",
+    "platform/src/remote_core.rs": "4e50ee6177e79879e063e67a461a68b3038c324a07ed6d10f4849cddf4c71cce"
+  },
+  "verification": [
+    {
+      "command": "MSS_TEST_TOOLS=<exact-base-tools> python -B -m unittest discover -s MSS_MCP/tests -p 'test_mss_user_seq.py' -v",
+      "status": "FAIL",
+      "purpose": "RED regression proof against byte-verified PR15 base router/helpers.",
+      "router_source_sha": "68ce7287347d9d82ca009b3f88559afc2718454f",
+      "test_source_sha": "0bdc639b34c09d013b2187a70c06541f15e882f9",
+      "exit_code": 1,
+      "tests": 25,
+      "framework_failures": 22,
+      "framework_errors": 1,
+      "note": "Framework counts include failing subtests; do not infer passed-method counts by subtraction.",
+      "baseline_module_sha256": {
+        "mss_builds.py": "fe1c48dba6d798d4ac3650a2da31cff3907f9bf70835e2624b89ea649599202f",
+        "mss_process.py": "aae882ff344fdc2b93e1f11850933fea62d493a661b756bcd6188ef0398023fa",
+        "mss_profiles.py": "0df0597a763036ddc358ab8fd015fa9413bacf388e2d84a08765a0a643313d68",
+        "mss_shared.py": "87793563cb019f2eb836ce55628a36a7528bd5afe233d2441e14534d03273022",
+        "mss_universal.py": "b512be499ebfcac74a2b0c8a775c4c7a7607f5a803852271fd9f37fef4dc8303"
+      },
+      "log_sha256": "f6278c49668f57fd6adba952dbd3ee3aad10ab0248abe1deaebef7d680c240a6"
+    },
+    {
+      "command": "python -B -m unittest discover -s MSS_MCP/tests -p 'test_mss_user_seq.py' -v",
+      "status": "PASS",
+      "source_sha": "0bdc639b34c09d013b2187a70c06541f15e882f9",
+      "exit_code": 0,
+      "tests": 25,
+      "failures": 0,
+      "skips": 0,
+      "log_sha256": "e9ed1f6051f144d3b71c60686d0b74cf3bf50510dd745c2669658fb5598ee5f8"
+    },
+    {
+      "command": "python -B -m unittest discover -s MSS_MCP/tests -p 'test_mss_*.py' -v",
+      "status": "PASS",
+      "source_sha": "0bdc639b34c09d013b2187a70c06541f15e882f9",
+      "exit_code": 0,
+      "tests": 143,
+      "failures": 0,
+      "skips": 0,
+      "log_sha256": "9b6613beeb84c1034ee14f8364cbefda5cb167f214608f00e07e52d6220a23f9",
+      "environment": "Windows11, CPython3.12.14, ordinary user, task-only TEMP/TMP; real hard-link negative retained."
+    },
+    {
+      "command": "Python AST parse of changed router/test",
+      "source_sha": "0bdc639b34c09d013b2187a70c06541f15e882f9",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "command": "git diff 68ce7287347d9d82ca009b3f88559afc2718454f HEAD --check",
+      "source_sha": "0bdc639b34c09d013b2187a70c06541f15e882f9",
+      "status": "PASS",
+      "exit_code": 0
+    }
+  ],
+  "new_test_inventory": [
+    {
+      "name": "test_mss_user_seq.UserSequenceTests.test_activity_capability_missing_does_not_dispatch",
+      "status": "PASS"
+    },
+    {
+      "name": "test_mss_user_seq.UserSequenceTests.test_deeply_nested_activity_is_refused_before_dispatch_in_queue",
+      "status": "PASS"
+    },
+    {
+      "name": "test_mss_user_seq.UserSequenceTests.test_error_malformed_json_or_transport_before_action_is_controlled_refusal",
+      "status": "PASS"
+    },
+    {
+      "name": "test_mss_user_seq.UserSequenceTests.test_foreign_app_is_refused_before_any_native_read",
+      "status": "PASS"
+    },
+    {
+      "name": "test_mss_user_seq.UserSequenceTests.test_invalid_requested_sequence_rejected_by_public_validation",
+      "status": "PASS"
+    },
+    {
+      "name": "test_mss_user_seq.UserSequenceTests.test_matching_sequence_dispatched_once_with_original_native_guard",
+      "status": "PASS"
+    },
+    {
+      "name": "test_mss_user_seq.UserSequenceTests.test_missing_or_invalid_activity_never_defaults_to_zero",
+      "status": "PASS"
+    },
+    {
+      "name": "test_mss_user_seq.UserSequenceTests.test_native_error_after_applied_action_stays_unknown",
+      "status": "PASS"
+    },
+    {
+      "name": "test_mss_user_seq.UserSequenceTests.test_neighbor_activity_cannot_satisfy_this_apps_guard",
+      "status": "PASS"
+    },
+    {
+      "name": "test_mss_user_seq.UserSequenceTests.test_no_explicit_guard_keeps_existing_call_path",
+      "status": "PASS"
+    },
+    {
+      "name": "test_mss_user_seq.UserSequenceTests.test_permission_revoked_while_waiting_is_rechecked_before_activity",
+      "status": "PASS"
+    },
+    {
+      "name": "test_mss_user_seq.UserSequenceTests.test_queued_postdispatch_error_marks_unknown",
+      "status": "PASS"
+    },
+    {
+      "name": "test_mss_user_seq.UserSequenceTests.test_queued_preflight_runs_after_turn_and_records_failed_not_unknown",
+      "status": "PASS"
+    },
+    {
+      "name": "test_mss_user_seq.UserSequenceTests.test_race_error_after_matching_preflight_stays_unknown_and_never_replayed",
+      "status": "PASS"
+    },
+    {
+      "name": "test_mss_user_seq.UserSequenceTests.test_raw_key_mouse_and_drop_keep_guard_and_clipboard_policy",
+      "status": "PASS"
+    },
+    {
+      "name": "test_mss_user_seq.UserSequenceTests.test_read_only_profile_cannot_gain_dispatch_authority",
+      "status": "PASS"
+    },
+    {
+      "name": "test_mss_user_seq.UserSequenceTests.test_revoked_permission_is_refused_before_activity",
+      "status": "PASS"
+    },
+    {
+      "name": "test_mss_user_seq.UserSequenceTests.test_select_fallback_after_dispatch_is_still_unknown",
+      "status": "PASS"
+    },
+    {
+      "name": "test_mss_user_seq.UserSequenceTests.test_semantic_type_keeps_replace_text_and_guard",
+      "status": "PASS"
+    },
+    {
+      "name": "test_mss_user_seq.UserSequenceTests.test_stale_process_identity_is_refused_before_activity",
+      "status": "PASS"
+    },
+    {
+      "name": "test_mss_user_seq.UserSequenceTests.test_stale_sequence_refused_without_native_action",
+      "status": "PASS"
+    },
+    {
+      "name": "test_mss_user_seq.UserSequenceTests.test_timeout_after_dispatch_is_unknown_without_replay",
+      "status": "PASS"
+    },
+    {
+      "name": "test_mss_user_seq.UserSequenceTests.test_u64_activity_sequence_not_narrowed_or_float_converted",
+      "status": "PASS"
+    },
+    {
+      "name": "test_mss_user_seq.UserSequenceTests.test_wrong_window_is_refused_before_activity",
+      "status": "PASS"
+    },
+    {
+      "name": "test_mss_user_seq.UserSequenceTests.test_zero_is_a_real_sequence_not_a_missing_default",
+      "status": "PASS"
+    }
+  ],
+  "invariants": [
+    "C-SEQ-01",
+    "C-SEQ-02",
+    "C-SEQ-03",
+    "C-SEQ-04",
+    "C-SEQ-05",
+    "C-SEQ-06",
+    "C-SEQ-07"
+  ],
+  "independent_source_review": {
+    "found": "RecursionError from nested activity text could escape preflight before dispatch.",
+    "resolution": "Catch only in preflight, add queued deep-JSON refusal regression; keep postdispatch handling unchanged.",
+    "final": "No remaining source-review blocker reported. Review did not execute live apps."
+  },
+  "evidence_level": "Model-free Router/App policy/receipt/native-peer/queue fixtures plus existing real copied stdio tests; not Makepad GUI.",
+  "not_run": [
+    "Cargo/native fixture/builds: no Rust or launcher change; coordinator reserved native queue.",
+    "Live Makepad replay of exact new router.",
+    "Hosted GPU/GUI/full Toolkit acceptance."
+  ],
+  "not_verified": [
+    "OS isolation",
+    "Production qualification",
+    "Cross-version runtime compatibility"
+  ],
+  "preserved": [
+    "Native if_user_seq guard",
+    "Postdispatch OUTCOME_UNKNOWN/no replay",
+    "Existing narrowly proved raw-input refusal semantics",
+    "SHARED_CLIPBOARD policy",
+    "Owner/process/window validation and queue reauthorization"
+  ],
+  "no_live_install_reconnect_profiles_sdk_or_documents_changed": true,
+  "no_new_mcp_tool_or_server": true,
+  "no_model_api_or_global_input": true,
+  "no_auto_merge_force_push_or_existing_pr_branch_write": true
+}
