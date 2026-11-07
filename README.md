@@ -80,3 +80,9 @@ Every stage remains unaccepted until its required evidence is recorded.
 ## Existing Desktop shell
 
 The source in [MSS_Desktop/src/main.rs](MSS_Desktop/src/main.rs) renders a visual shell using the Makepad revision pinned in [MSS_Desktop/Cargo.toml](MSS_Desktop/Cargo.toml). Its session entries and status are illustrative. It launches no child app and proves no real session, frame, or Toolkit operation.
+
+## Independent from CWG
+
+[CWG separation and module status](doc/cwg-separation.md) defines the owner-approved project boundary. GitHub-to-chat routing, development dispatch and the optional development check broker belong to external Chat_Worker_GitHub, not the MSS product. GUI-facing MSS_MCP, project goals, Toolkit tests and independent native evidence requirements remain in MSS.
+
+The [effective scope policy](doc/plans/mss-scope-v2.json) removes the master plan's A13 -> B06 dependency and retains an independent MSS-V00 verification gate. The [scope validator](scripts/mss_scope.py) preserves the pinned Toolkit contract and historical inventories; it does not grant runtime acceptance or enable any automation. Implementations in unmerged PR #10/#11 are distinct from this main-based architecture tree.

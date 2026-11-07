@@ -1,0 +1,102 @@
+{
+  "schema": "mss-cwg-separation-v1",
+  "mss_repository": "paulgreenbox-beep/makepad-sandstudio",
+  "cwg_repository": "paulgreenbox-beep/Chat_Worker_GitHub",
+  "runtime_acceptance": "NOT_VERIFIED",
+  "toolkit_operation_count": 112,
+  "source_inputs_sha256": {
+    "pr-backlog.json": "b4af974f6de45515f7662164d938fe6c8916b4373c4bee03bf5b58a94e0ef466",
+    "invariants.json": "4066ac6f3df724125f92bf2bdcc6fb04513c5c3a03fd072d67749bacaf777cfa",
+    "proposed-tests.json": "e6ccaf1515f96bb67237b1174aae7a53888bff68a6a131acb2fe572b5aabf9cc",
+    "toolkit/operations.raw.json": "ffaaba15ddc2ee57c7eaf001383ee2bd285d324d640a49eed390eb4fcf339470",
+    "toolkit/schema.raw.json": "94e0ce13b5f34002bda1b598e4b5030a30479852f7c7b284d92060f40c6f3c88",
+    "toolkit/scenario-registry.json": "9e5585bd28403afcb8bd2bd363352168dfadeb2edb62ae61c369360303bf164b"
+  },
+  "decision": "MSS builds and native acceptance do not depend on CWG, its dispatcher, credentials, model service or check-broker binary. Equivalent MSS-native security/evidence qualification remains mandatory.",
+  "mss_keeps": [
+    "MSS_Core",
+    "MSS_Remote",
+    "MSS_Render",
+    "MSS_SDK",
+    "MSS_API",
+    "MSS_MCP",
+    "MSS_Desktop",
+    "MSS_Skills",
+    "project-local goals, test catalog, evidence and unchanged Toolkit contracts"
+  ],
+  "external_cwg": [
+    "GitHub-to-chat routing",
+    "automatic issue dispatcher",
+    "development worker orchestration",
+    "optional independent development check broker"
+  ],
+  "independent_verification_gate": {
+    "id": "MSS-V00",
+    "title": "Independent MSS native verification and evidence authority",
+    "depends_on": [
+      "A02"
+    ],
+    "owner_repository": "paulgreenbox-beep/makepad-sandstudio",
+    "implementation_status": "PLANNED_NOT_STARTED",
+    "invariants": [
+      "INV-EVIDENCE-01",
+      "INV-EVIDENCE-02",
+      "INV-EVIDENCE-03",
+      "INV-TEST-01",
+      "INV-FS-01",
+      "INV-NET-01",
+      "INV-EXEC-01",
+      "INV-SOURCE-01",
+      "INV-CI-01",
+      "INV-RELEASE-01"
+    ],
+    "equivalent_checks_from": [
+      "T-019",
+      "T-033",
+      "T-036",
+      "T-037",
+      "T-038",
+      "T-039",
+      "T-X10",
+      "T-X13",
+      "T-X14"
+    ],
+    "acceptance": [
+      "Owner-approved physical Windows/toolchain/dependency profile; no containers, WSL/WSLC, VMs or user-desktop input.",
+      "Exact immutable source and executable identity; source/worker/output/credential authority separated under the applicable threat model.",
+      "Independent authenticated source-bound evidence; a hash, compile or command acknowledgement alone is not a verified result.",
+      "Native negative file/network/process/cleanup checks on the actual MSS profile; mock proofs or broker success are not substituted.",
+      "Untrusted generated code, build.rs and dependency hooks are not executed before their native boundary is qualified. Trusted fixed-fixture experiments need separate explicit admission.",
+      "Full unchanged Toolkit operations/schema/scenarios and all native positive/negative/teardown tests remain required. No unavailable operation is counted as PASS.",
+      "New exact-SHA reports with independent owner review; no activation, merge, self-VERIFIED, credentials or paid calls authorized by this document."
+    ],
+    "conditional_backend_gates": {
+      "private_windows_desktop": [
+        "INV-PROC-06",
+        "INV-PROC-07",
+        "T-022",
+        "T-023"
+      ],
+      "rule": "Any reuse of a private-desktop or shared-surface mechanism retains its real association/cleanup/security gates. Not applicable must be justified by the reviewed backend design, not used to remove Toolkit requirements."
+    },
+    "cwg_requirement": "NONE; an optional external verifier must meet the same contract and does not confer acceptance by name."
+  },
+  "historical_sources": [
+    {
+      "pr": 5,
+      "sha": "9c0e867f8844a6bc7949c7705db5c2cbbb65ef1c",
+      "handling": "Project GOAL data stays MSS; reusable automatic routing/workflow belongs CWG."
+    },
+    {
+      "pr": 7,
+      "sha": "d83520d931ab000574c5c02192b9f49da86a34ea",
+      "handling": "CWG source reference only; disabled dispatcher must not merge into MSS."
+    },
+    {
+      "pr": 9,
+      "sha": "368e5c54bb3da8a65cad2db9f141041100eb4630",
+      "handling": "Optional CWG broker reference; production and USER32 association remain blocked. No evidence promoted."
+    }
+  ],
+  "historical_plan_archive": "doc/plans/2026-10-30/MSS_MASTER_IMPLEMENTATION_PLAN_2026-10-30.zip on docs/mss-master-plan-20261030; preserve unchanged. This scope view supersedes scheduling, not historical evidence."
+}
