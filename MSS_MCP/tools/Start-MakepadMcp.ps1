@@ -59,17 +59,111 @@ function Invoke-OwnedRemote([string[]]$Words) {
         if (-not $client.WaitForExit(10000)) {
             # This is the launcher-created read/cleanup client, not the application.
             $client.Kill()
-            $client.WaitForExit()
+            if (-not $client.WaitForExit(5000)) { throw 'Owned Remote helper did not exit after termination.' }
             throw 'Remote client timed out; no mutation is replayed.'
         }
         return @{ ExitCode = $client.ExitCode; Output = $output.GetAwaiter().GetResult() }
     } finally { $client.Dispose() }
 }
-function Confirm-OwnedApp {
-    if ($script:app.HasExited) { return $false }
-    if ($script:app.StartTime.ToUniversalTime().Ticks -ne $script:birthTicks) { throw 'App birth identity mismatch.' }
-    if ($script:app.MainModule.FileName -ine $script:appExecutable) { throw 'App image identity mismatch.' }
+function Initialize-OwnedProcessInterop {
+    if ('MssOwnedProcess' -as [type]) { return }
+    Add-Type -TypeDefinition @'
+using System;
+using System.ComponentModel;
+using System.Runtime.InteropServices;
+using System.Text;
+using Microsoft.Win32.SafeHandles;
+public sealed class MssOwnedSnapshot {
+    public uint Pid;
+    public long BirthFileTime;
+    public bool Exited;
+    public int? ExitCode;
+}
+public static class MssOwnedProcess {
+    [DllImport("kernel32.dll", SetLastError=true)]
+    private static extern uint GetProcessId(SafeProcessHandle process);
+    [DllImport("kernel32.dll", SetLastError=true)]
+    private static extern bool GetProcessTimes(SafeProcessHandle process, out long creation,
+        out long exit, out long kernel, out long user);
+    [DllImport("kernel32.dll", SetLastError=true)]
+    private static extern uint WaitForSingleObject(SafeProcessHandle process, uint milliseconds);
+    [DllImport("kernel32.dll", SetLastError=true)]
+    private static extern bool GetExitCodeProcess(SafeProcessHandle process, out uint code);
+    [DllImport("kernel32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
+    private static extern bool QueryFullProcessImageNameW(SafeProcessHandle process, uint flags,
+        StringBuilder image, ref uint length);
+    public static MssOwnedSnapshot Read(SafeProcessHandle process) {
+        uint pid = GetProcessId(process);
+        long born, exited, kernel, user;
+        if (pid == 0 || !GetProcessTimes(process, out born, out exited, out kernel, out user))
+            throw new Win32Exception(Marshal.GetLastWin32Error(), "Retained process identity unavailable.");
+        uint wait = WaitForSingleObject(process, 0);
+        if (wait != 0 && wait != 258)
+            throw new Win32Exception(Marshal.GetLastWin32Error(), "Retained process wait failed.");
+        var value = new MssOwnedSnapshot { Pid=pid, BirthFileTime=born, Exited=(wait == 0) };
+        if (value.Exited) {
+            uint code;
+            if (!GetExitCodeProcess(process, out code))
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "Retained exit code unavailable.");
+            value.ExitCode = unchecked((int)code);
+        }
+        return value;
+    }
+    public static string Image(SafeProcessHandle process) {
+        var current = Read(process);
+        if (current.Exited) return null;
+        uint size = 32768;
+        var image = new StringBuilder((int)size);
+        if (!QueryFullProcessImageNameW(process, 0, image, ref size)) return null;
+        return image.ToString();
+    }
+}
+'@
+}
+function Read-OwnedApp {
+    if ($null -eq $script:appHandle) { throw 'No retained application handle.' }
+    $current = [MssOwnedProcess]::Read($script:appHandle)
+    if ($current.Pid -ne $script:receipt.app_pid -or $current.BirthFileTime -ne $script:birthFileTime) {
+        throw 'Retained app PID or birth identity mismatch.'
+    }
+    return $current
+}
+function Set-OwnedImage {
+    $image = [MssOwnedProcess]::Image($script:appHandle)
+    if ([string]::IsNullOrEmpty($image)) { return $false }
+    if ($image -ine $script:appExecutable) { throw 'App image identity mismatch.' }
+    if ($script:receipt.app_image_verified -and $script:receipt.app_image -ine $image) {
+        throw 'Confirmed app image changed.'
+    }
+    $script:receipt.app_image = $image
+    $script:receipt.app_image_verified = $true
     return $true
+}
+function Wait-OwnedImage {
+    $clock = [Diagnostics.Stopwatch]::StartNew()
+    do {
+        $current = Read-OwnedApp
+        if ($current.Exited) { return $false }
+        if (Set-OwnedImage) { return $true }
+        Start-Sleep -Milliseconds 20
+    } while ($clock.ElapsedMilliseconds -lt 2000)
+    return $false
+}
+function Confirm-OwnedApp {
+    $current = Read-OwnedApp
+    if ($current.Exited) { return $false }
+    if (-not (Set-OwnedImage)) { throw 'Owned live app image identity is unavailable.' }
+    return $true
+}
+function Save-OwnedExitProof {
+    $current = Read-OwnedApp
+    if (-not $current.Exited) { throw 'Retained owned process has not exited.' }
+    $script:receipt.app_exit_code = $current.ExitCode
+    $script:receipt.exit_proof = @{
+        kind='retained_process_handle';pid=[int]$current.Pid
+        birth_filetime=$current.BirthFileTime;exit_observed=$true
+        exit_code=$current.ExitCode;image_verified=$script:receipt.app_image_verified
+    }
 }
 function Write-Receipt {
     $text = $script:receipt | ConvertTo-Json -Depth 8
@@ -80,6 +174,9 @@ $appPin = $null
 $stdoutSink = $null
 $remotePin = $null
 $app = $null
+$appHandle = $null
+$launcherProcess = $null
+$birthFileTime = $null
 $server = $null
 $logs = @()
 $pumps = @()
@@ -127,6 +224,11 @@ try {
         $exitCode = 0
     } else {
         if (-not $IsWindows) { throw 'This launcher is qualified for native Windows only.' }
+        Initialize-OwnedProcessInterop
+        $launcherProcess = [Diagnostics.Process]::GetCurrentProcess()
+        $launcherState = [MssOwnedProcess]::Read($launcherProcess.SafeHandle)
+        $launcherImage = [MssOwnedProcess]::Image($launcherProcess.SafeHandle)
+        if ([string]::IsNullOrEmpty($launcherImage)) { throw 'Launcher process identity unavailable.' }
         $sessionId = [Guid]::NewGuid().ToString('N')
         $sessionDirectory = Join-Path $sessionRoot ($configuration.id + '-' + $sessionId)
         [void][IO.Directory]::CreateDirectory($sessionDirectory)
@@ -137,26 +239,41 @@ try {
             app_sha256=$configuration.app_sha256;remote_sha256=$configuration.remote_sha256
             started_utc=[DateTime]::UtcNow.ToString('o');status='STARTING'
             cleanup='NOT_RUN';mcp_exit_code=$null;app_exit_code=$null
+            app_pid=$null;app_birth_utc=$null;app_birth_filetime=$null
+            app_image_expected=$appExecutable;app_image=$null;app_image_verified=$false
+            launch_intent_utc=[DateTime]::UtcNow.ToString('o');process_started=$false
+            startup_qualified=$false;exit_proof=$null;mcp_started=$false;mcp_exit_observed=$false
+            launcher_pid=[int]$launcherState.Pid;launcher_birth_filetime=$launcherState.BirthFileTime
+            launcher_birth_utc=[DateTime]::FromFileTimeUtc($launcherState.BirthFileTime).ToString('o')
+            launcher_image=$launcherImage;launcher_image_sha256=(Get-FileHash -LiteralPath $launcherImage -Algorithm SHA256).Hash
+            launcher_script_path=$PSCommandPath;launcher_script_sha256=(Get-FileHash -LiteralPath $PSCommandPath -Algorithm SHA256).Hash
             limitations=@('trusted development only','same-user OS isolation NOT_VERIFIED',
                 'supervisor crash cleanup NOT_VERIFIED','descendant containment NOT_VERIFIED',
                 'filesystem/network confinement and log disk quotas NOT_IMPLEMENTED')
         }
+        # Persist launch intent before Process.Start. A PID alone never grants cleanup authority.
+        Write-Receipt
         $appInfo = New-ChildInfo $appExecutable $appArguments $true
         $appInfo.RedirectStandardInput = $true
         $app = [Diagnostics.Process]::Start($appInfo)
+        $appHandle = $app.SafeHandle
+        $created = [MssOwnedProcess]::Read($appHandle)
+        $birthFileTime = $created.BirthFileTime
+        $receipt.process_started = $true
+        $receipt.app_pid = [int]$created.Pid
+        $receipt.app_birth_filetime = $birthFileTime
+        $receipt.app_birth_utc = [DateTime]::FromFileTimeUtc($birthFileTime).ToString('o')
+        Write-Receipt
         $app.StandardInput.Close()
-        [void]$app.SafeHandle
-        $birthTicks = $app.StartTime.ToUniversalTime().Ticks
-        $receipt.app_pid = $app.Id
-        $receipt.app_birth_utc = $app.StartTime.ToUniversalTime().ToString('o')
-        $receipt.app_image = $app.MainModule.FileName
-        if ($receipt.app_image -ine $appExecutable) { throw 'Created app image did not match admitted image.' }
         foreach ($name in @('stdout','stderr')) {
             $file = [IO.File]::Open((Join-Path $sessionDirectory ('app-' + $name + '.log')),
                 [IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::Read)
             $logs += $file
             $reader = if ($name -eq 'stdout') { $app.StandardOutput } else { $app.StandardError }
             $pumps += $reader.BaseStream.CopyToAsync($file)
+        }
+        if (-not (Wait-OwnedImage)) {
+            throw 'Owned app exited or image identity was unavailable within 2000 ms; no Remote request was sent.'
         }
         Write-Receipt
         $discoveryPath = Join-Path $sessionDirectory ('makepad-remote-' + $app.Id + '.json')
@@ -184,6 +301,7 @@ try {
         }
         if (-not $ready) { throw 'BLOCKED: owned app Remote/window readiness was not established.' }
         $receipt.status = 'READY'
+        $receipt.startup_qualified = $true
         Write-Receipt
         [Console]::Error.WriteLine('[MSS] Profile ' + $configuration.id + '; session ' + $sessionId + '; owned pid ' + $app.Id)
         # Copy raw bytes: no PowerShell text pipeline or JSON-RPC implementation.
@@ -206,6 +324,7 @@ public static class MssMcpStdout {
         $serverInfo = New-ChildInfo $remoteExecutable @('mcp',[string]$app.Id) $true
         $serverInfo.RedirectStandardInput = $true
         $server = [Diagnostics.Process]::Start($serverInfo)
+        $receipt.mcp_started = $true
         [void]$server.SafeHandle
         $inputPump = [Console]::OpenStandardInput().CopyToAsync($server.StandardInput.BaseStream)
         $outputPump = $server.StandardOutput.BaseStream.CopyToAsync($stdoutSink)
@@ -220,10 +339,10 @@ public static class MssMcpStdout {
                 $server.StandardInput.Close()
                 $inputClosed = $true
             }
-            if ($app.HasExited) {
+            if ((Read-OwnedApp).Exited) {
                 $receipt.status = 'FAIL_APP_EXIT'
                 $server.Kill()
-                $server.WaitForExit()
+                if (-not $server.WaitForExit(5000)) { throw 'Owned MCP client exit is unavailable.' }
                 throw 'App exited while MCP was active; no request is replayed.'
             }
         }
@@ -231,6 +350,7 @@ public static class MssMcpStdout {
             if (-not $pump.Wait(5000)) { throw 'MCP output transfer did not finish.' }
         }
         $receipt.mcp_exit_code = $server.ExitCode
+        $receipt.mcp_exit_observed = $true
         $exitCode = $server.ExitCode
         $receipt.status = if ($exitCode -eq 0) { 'MCP_EXITED' } else { 'FAIL_MCP_EXIT' }
     }
@@ -239,12 +359,25 @@ public static class MssMcpStdout {
     if (Get-Variable receipt -ErrorAction SilentlyContinue) { $receipt.status = 'FAIL'; $receipt.error = $_.Exception.Message }
     $exitCode = 1
 } finally {
-    if ($server -and -not $server.HasExited) {
-        try { $server.Kill(); $server.WaitForExit() }
-        catch { [Console]::Error.WriteLine('[MSS] MCP termination raced with exit; continuing app cleanup.') }
-        $exitCode = 1
+    $serverExitConfirmed = $null -eq $server
+    if ($server) {
+        try {
+            if (-not $server.HasExited) {
+                $server.Kill()
+                if (-not $server.WaitForExit(5000)) { throw 'Owned MCP client did not exit after termination.' }
+                $exitCode = 1
+            }
+            if (-not $server.HasExited) { throw 'Owned MCP client exit is unavailable.' }
+            $receipt.mcp_exit_code = $server.ExitCode
+            $receipt.mcp_exit_observed = $true
+            $serverExitConfirmed = $true
+        } catch {
+            [Console]::Error.WriteLine('[MSS] MCP cleanup: ' + $_.Exception.Message)
+            $exitCode = 1
+        }
     }
     if ($app) {
+        $appExitConfirmed = $false
         try {
             if (Confirm-OwnedApp) {
                 try { [void](Invoke-OwnedRemote @('gq')) } catch { [Console]::Error.WriteLine('[MSS] gq response unavailable; checking owned process exit.') }
@@ -258,14 +391,16 @@ public static class MssMcpStdout {
                 }
                 $receipt.cleanup = 'GRACEFUL'
             } else { $receipt.cleanup = 'ALREADY_EXITED' }
-            $receipt.app_exit_code = $app.ExitCode
-            if ($app.ExitCode -ne 0) { $exitCode = 1 }
+            Save-OwnedExitProof
+            $appExitConfirmed = $true
+            if ($receipt.app_exit_code -ne 0) { $exitCode = 1 }
         } catch {
             [Console]::Error.WriteLine('[MSS] Cleanup: ' + $_.Exception.Message)
             $receipt.cleanup = 'CLEANUP_PENDING'
             $exitCode = 1
         }
-        $receipt.log_capture = 'COMPLETE'
+        $receipt.log_capture = if ($pumps.Count -eq 2 -and $logs.Count -eq 2) { 'COMPLETE' } else { 'INCOMPLETE' }
+        if ($receipt.log_capture -ne 'COMPLETE') { $exitCode = 1 }
         foreach ($pump in $pumps) {
             try {
                 if (-not $pump.Wait(5000)) { $receipt.log_capture = 'INCOMPLETE'; $exitCode = 1 }
@@ -275,12 +410,26 @@ public static class MssMcpStdout {
             try { $log.Dispose() } catch { $receipt.log_capture = 'INCOMPLETE'; $exitCode = 1 }
         }
         $receipt.launcher_exit_code = $exitCode
-        if ($exitCode -eq 0) { $receipt.status = 'CLOSED' }
+        if ($appExitConfirmed -and $serverExitConfirmed) {
+            $receipt.status = if ($receipt.startup_qualified -and $exitCode -eq 0) { 'CLOSED' } else { 'FAILED_CLOSED' }
+        } else {
+            $receipt.status = 'CLEANUP_PENDING'
+            $receipt.cleanup = 'CLEANUP_PENDING'
+            $exitCode = 1
+            $receipt.launcher_exit_code = 1
+        }
         $receipt.completed_utc = [DateTime]::UtcNow.ToString('o')
         try { Write-Receipt }
         catch { [Console]::Error.WriteLine('[MSS] Final receipt could not be written.'); $exitCode = 1 }
+    } elseif (Get-Variable receipt -ErrorAction SilentlyContinue) {
+        # A failed Process.Start did not provide a retained handle proving what happened.
+        $receipt.status = 'CLEANUP_PENDING'
+        $receipt.cleanup = 'CLEANUP_PENDING'
+        $receipt.launcher_exit_code = 1
+        $receipt.completed_utc = [DateTime]::UtcNow.ToString('o')
+        try { Write-Receipt } catch { [Console]::Error.WriteLine('[MSS] Incomplete-launch receipt could not be written.') }
     }
-    foreach ($resource in @($server,$app,$remotePin,$appPin,$stdoutSink)) {
+    foreach ($resource in @($server,$app,$remotePin,$appPin,$stdoutSink,$launcherProcess)) {
         if ($null -ne $resource) { try { $resource.Dispose() } catch { $exitCode = 1 } }
     }
 }

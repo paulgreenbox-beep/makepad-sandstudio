@@ -1,5 +1,51 @@
 """Local stdio router for admitted Makepad Remote development apps."""
 
+# Freeze the server implementation before any MSS helper import. The small initial
+# boot wrapper and the interpreter itself are outside this source attestation.
+if __name__ == "__main__" and "_MSS_FROZEN_STARTUP" not in globals():
+    import hashlib as _hashlib
+    import importlib.abc as _abc
+    import importlib.util as _util
+    import json as _json
+    import sys as _sys
+    from datetime import datetime as _datetime, timezone as _timezone
+    from pathlib import Path as _Path
+
+    _base = _Path(__file__).resolve().parent
+    _names = ("mss_universal", "mss_profiles", "mss_builds", "mss_process", "mss_shared")
+    if any(_name in _sys.modules for _name in _names):
+        raise RuntimeError("MSS source was imported before the startup snapshot")
+    _frozen = {_name: ((_base / (_name + ".py")).read_bytes(), str(_base / (_name + ".py")))
+               for _name in _names}
+    _digests = {_name + ".py": {"sha256": _hashlib.sha256(_data[0]).hexdigest()}
+                for _name, _data in sorted(_frozen.items())}
+    _MSS_FROZEN_STARTUP = {
+        "capture_mode": "frozen_source_bytes_executed",
+        "captured_at_utc": _datetime.now(_timezone.utc).isoformat(), "modules": _digests,
+        "aggregate_sha256": _hashlib.sha256(_json.dumps(_digests, sort_keys=True, separators=(",", ":")).encode()).hexdigest(),
+        "limitations": ["Initial bootstrap, Python interpreter, standard library and native modules are not attested.",
+                        "Trusted local source snapshot; not a signed receipt or protection against host tampering.",
+                        "Hashes identify frozen bytes, not later files on disk; external launcher is pinned separately."],
+    }
+
+    class _FrozenMss(_abc.MetaPathFinder, _abc.Loader):
+        def find_spec(self, fullname, path=None, target=None):
+            if fullname in _frozen and fullname != "mss_universal":
+                return _util.spec_from_loader(fullname, self, origin=_frozen[fullname][1])
+            return None
+
+        def create_module(self, spec):
+            return None
+
+        def exec_module(self, module):
+            source, filename = _frozen[module.__name__]
+            module.__file__ = filename
+            exec(compile(source, filename, "exec"), module.__dict__)
+
+    _sys.meta_path.insert(0, _FrozenMss())
+    exec(compile(_frozen["mss_universal"][0], _frozen["mss_universal"][1], "exec"), globals())
+    raise SystemExit(0)
+
 import base64
 from contextlib import ExitStack
 from concurrent.futures import ThreadPoolExecutor
@@ -14,6 +60,7 @@ import re
 import struct
 import subprocess
 import sys
+from datetime import datetime, timezone
 from threading import BoundedSemaphore, Event, RLock, Thread
 from time import monotonic
 from uuid import uuid4
@@ -123,6 +170,9 @@ ROUTES = {
 }
 
 TOOLS = [
+    tool("mss_server_info", "Read this running MSS server's immutable startup identity and frozen Python source manifest.", {}),
+    tool("mss_recheck_cleanup", "Reconcile an MSS launch receipt without signalling a process. Never attaches or retries GUI actions.",
+         {"app_id": "string"}, ("app_id",), read=False),
     tool("mss_list_apps", "List the operator-admitted application profiles.", {}),
     tool("mss_list_builds", "List a profile's baseline, registered builds, active build, and rollback target.",
          {"profile": "string"}, ("profile",)),
@@ -202,6 +252,67 @@ def json_bytes(value):
 
 def write_record(path, value):
     path.write_bytes(json_bytes(value))
+
+
+# No legacy launcher is admitted by this public source distribution. A private,
+# separately reviewed migration must never grant authority to another install.
+LEGACY_LAUNCHER_SHA256 = ""
+TERMINAL_LIFECYCLE = {"CLOSED", "FAILED_CLOSED"}
+
+
+def cleanup_classification(receipt, *, launcher_code=None, launcher_pid=None, legacy_known=False):
+    """No signalling: distinguish a failed lifecycle from unconfirmed process exit."""
+    pending = lambda reason: {"state": "CLEANUP_PENDING", "reason": reason}
+    if not (type(receipt.get("app_pid")) is int and receipt["app_pid"] > 0
+            and isinstance(receipt.get("app_birth_utc"), str) and receipt["app_birth_utc"]
+            and type(receipt.get("app_exit_code")) is int):
+        return pending("MISSING_OWNED_PROCESS_EXIT_IDENTITY")
+    try:
+        from mss_process import birth_ticks
+        birth = birth_ticks(receipt["app_birth_utc"])
+    except (ValueError, TypeError, OverflowError):
+        return pending("INVALID_BIRTH_IDENTITY")
+    proof = receipt.get("exit_proof")
+    if isinstance(proof, dict):
+        if not (proof.get("kind") == "retained_process_handle" and proof.get("exit_observed") is True
+                and type(proof.get("pid")) is int and type(proof.get("birth_filetime")) is int
+                and type(receipt.get("app_birth_filetime")) is int
+                and proof.get("pid") == receipt["app_pid"] and proof.get("birth_filetime") == birth
+                and receipt.get("app_birth_filetime") == birth
+                and type(proof.get("exit_code")) is int and proof["exit_code"] == receipt["app_exit_code"]):
+            return pending("RETAINED_EXIT_PROOF_MISMATCH")
+        if launcher_pid is not None and receipt.get("launcher_pid") != launcher_pid:
+            return pending("LAUNCHER_PROCESS_MISMATCH")
+        if launcher_code is not None and receipt.get("launcher_exit_code") != launcher_code:
+            return pending("LAUNCHER_EXIT_MISMATCH")
+        if type(receipt.get("mcp_started")) is not bool:
+            return pending("OWNED_MCP_STATE_UNCONFIRMED")
+        if receipt.get("mcp_started") is True and receipt.get("mcp_exit_observed") is not True:
+            return pending("OWNED_MCP_EXIT_UNCONFIRMED")
+        proof_kind = "retained_process_handle_exit"
+    elif (legacy_known and "exit_proof" not in receipt and "launcher_script_sha256" not in receipt
+          and receipt.get("cleanup") == "GRACEFUL"):
+        # The admitted legacy source writes GRACEFUL only after birth/image check
+        # and WaitForExit on its retained Process.Start object. Preserve this limit.
+        proof_kind = "legacy_GRACEFUL_retained_handle_branch"
+    else:
+        return pending("NO_BOUND_EXIT_PROOF")
+    if receipt.get("status") not in {"CLOSED", "FAILED_CLOSED", "FAIL", "FAIL_APP_EXIT", "FAIL_MCP_EXIT"}:
+        return pending("RECEIPT_NOT_FINAL")
+    if not (type(receipt.get("launcher_exit_code")) is int and receipt.get("completed_utc")):
+        return pending("FINAL_LAUNCHER_RECEIPT_MISSING")
+    healthy = (receipt["status"] == "CLOSED" and receipt.get("cleanup") == "GRACEFUL"
+               and bool(receipt.get("app_image"))
+               and (proof_kind.startswith("legacy_") or receipt.get("startup_qualified") is True)
+               and (proof_kind.startswith("legacy_") or receipt.get("app_image_verified") is True
+                    and proof.get("image_verified") is True)
+               and receipt["app_exit_code"] == 0 and receipt["launcher_exit_code"] == 0
+               and receipt.get("mcp_exit_code") == 0 and receipt.get("log_capture") == "COMPLETE")
+    return {"state": "CLOSED" if healthy else "FAILED_CLOSED", "reason": proof_kind,
+            "app_pid": receipt["app_pid"], "app_birth_utc": receipt["app_birth_utc"],
+            "app_exit_code": receipt["app_exit_code"], "launcher_exit_code": receipt["launcher_exit_code"],
+            "app_image_observed": receipt.get("app_image"),
+            "app_image_verified": receipt.get("app_image_verified", bool(receipt.get("app_image")))}
 
 
 def result_json(value, *, error=False):
@@ -435,18 +546,27 @@ class App:
         self.participant = False
         self.read_peer = None
         self.read_lock = RLock()
+        self.terminal_receipt = None
+        self.cleanup_detail = None
+        self.launcher_sha256 = None
+        self.launcher_start_attempted = False
+        self.startup_failed = False
 
     def record(self):
+        process = self.identity or self.terminal_receipt or {}
         return {
             "app_id": self.app_id, "profile": self.profile, "state": self.state,
-            "pid": self.identity.get("app_pid") if self.identity else None,
+            "pid": process.get("app_pid"),
             "app": self.plan.app_image.name if self.plan else None,
             "build_id": self.plan.build_id if self.plan else None,
             "app_sha256": self.plan.app_sha256 if self.plan else None,
-            "app_birth_utc": self.identity.get("app_birth_utc") if self.identity else None,
+            "app_birth_utc": process.get("app_birth_utc"),
             "artifact_dir": str(self.artifacts),
             "launcher_receipt": str(self.receipt_path) if self.receipt_path else None,
             "windows_session_id": self.os_identity["windows_session"] if self.os_identity else None,
+            "cleanup_reason": self.cleanup_detail.get("reason") if self.cleanup_detail else None,
+            "launcher_start_attempted": self.launcher_start_attempted,
+            "startup_failed": self.startup_failed,
         }
 
     def receipt(self):
@@ -460,11 +580,20 @@ class App:
                 and receipt["app_sha256"].lower() == self.plan.app_sha256.lower()
                 and receipt["remote_sha256"].lower() == self.plan.remote_sha256.lower()
                 and receipt["makepad_revision_declared"] == self.plan.makepad_revision
-                and Path(receipt["app_image"]) == self.plan.app_image
+                and Path(receipt.get("app_image_expected") or receipt["app_image"]) == self.plan.app_image
+                and (receipt.get("app_image") is None or Path(receipt["app_image"]) == self.plan.app_image)
                 and type(receipt["app_pid"]) is int and receipt["app_pid"] > 0
                 and bool(receipt["app_birth_utc"]) and bool(receipt["session_id"]),
                 "IDENTITY_UNVERIFIED", "Launcher receipt does not match the admitted profile.",
             )
+            require(receipt.get("status") not in {"READY", "CLOSED"} or bool(receipt.get("app_image")),
+                    "IDENTITY_UNVERIFIED", "A successful lifecycle needs the observed image identity.")
+            if self.launcher_sha256 and "launcher_script_sha256" in receipt:
+                require(receipt["launcher_script_sha256"].lower() == self.launcher_sha256.lower(),
+                        "IDENTITY_UNVERIFIED", "Launcher source binding changed.")
+            if receipt.get("profile_id"):
+                require(candidates[0].parent.name == receipt["profile_id"] + "-" + receipt["session_id"],
+                        "IDENTITY_UNVERIFIED", "Receipt session directory changed.")
             if self.identity:
                 require(all(receipt[key] == value for key, value in self.identity.items()),
                         "IDENTITY_UNVERIFIED", "Owned process identity changed.")
@@ -473,9 +602,11 @@ class App:
             raise ToolFailure("IDENTITY_UNVERIFIED", "Owned launcher receipt is unavailable.") from error
 
     def start(self, catalog):
+        self.launcher_sha256 = catalog.launcher_sha256
         self.directory.mkdir(parents=True, exist_ok=False)
         self.plan = self.stack.enter_context(catalog.prepare(self.profile, self.directory, self.requested_build))
         self.artifacts.mkdir()
+        self.launcher_start_attempted = True
         self.peer = Peer(self.plan, self.directory / "launcher-stderr.log")
         initialized = self.peer.request(
             "initialize", {"protocolVersion": VERSIONS[0], "capabilities": {},
@@ -732,34 +863,65 @@ class App:
             return self._close_owned()
 
     def _close_owned(self):
+        if self.cleanup_started and self.state in TERMINAL_LIFECYCLE:
+            return self.record()
         require(not self.cleanup_started, "CLEANUP_PENDING", "Cleanup was already requested.")
         self.cleanup_started = True
         self.state = "CLOSING"
         code = None
-        failure = None
+        detail = {"state": "CLEANUP_PENDING", "reason": "LAUNCHER_EXIT_UNCONFIRMED"}
         try:
             if self.read_peer:
                 self.read_peer.close()
             code = self.peer.close() if self.peer else None
+            if self.peer is None and not self.launcher_start_attempted:
+                detail = {"state": "FAILED_CLOSED", "reason": "NO_LAUNCHER_START_ATTEMPT"}
             if self.peer:
                 receipt = self.receipt()
-                require(code == 0 and receipt["status"] == "CLOSED" and receipt["cleanup"] == "GRACEFUL"
-                        and receipt.get("log_capture") == "COMPLETE"
-                        and all(receipt.get(key) == 0 for key in ("launcher_exit_code", "app_exit_code", "mcp_exit_code")),
-                        "CLEANUP_PENDING", "Graceful exit is not confirmed. See the owned launcher receipt.")
+                self.terminal_receipt = receipt
+                detail = cleanup_classification(receipt, launcher_code=code,
+                    launcher_pid=getattr(self.peer.process, "pid", None),
+                    legacy_known=self.launcher_sha256 is not None and self.launcher_sha256.lower() == LEGACY_LAUNCHER_SHA256)
+                if detail["state"] == "CLOSED" and self.startup_failed:
+                    detail.update(state="FAILED_CLOSED", reason="ROUTER_STARTUP_FAILED_PROCESS_CLOSED")
         except Exception as error:
-            failure = error
+            detail = {"state": "CLEANUP_PENDING", "reason": getattr(error, "code", type(error).__name__)}
         try:
             self.stack.close()
         except Exception as error:
-            if failure is None:
-                failure = error
-        self.state = "CLOSED" if failure is None else "CLEANUP_PENDING"
+            detail = {"state": "CLEANUP_PENDING", "reason": "RESOURCE_RELEASE_UNCONFIRMED"}
+        self.cleanup_detail = detail
+        self.state = detail["state"]
         if self.directory.is_dir():
             write_record(self.directory / "closure.json", self.record() | {"launcher_exit_code": code})
-        if failure is not None:
-            raise ToolFailure("CLEANUP_PENDING", "Cleanup is unresolved. See the owned session directory.") from failure
+        if self.state == "CLEANUP_PENDING":
+            raise ToolFailure("CLEANUP_PENDING", f"Cleanup is unresolved: {detail['reason']}. See the owned session directory.")
         return self.record()
+
+    def reconcile_cleanup(self):
+        """Only receipt/retained launcher observation; never send quit or repeat close."""
+        with self.read_lock:
+            if self.state in TERMINAL_LIFECYCLE:
+                return self.record()
+            require(self.state != "READY", "APP_RUNNING", "A ready app is not a cleanup record.")
+            try:
+                receipt = self.receipt()
+                code = self.peer.process.poll() if self.peer else None
+                detail = cleanup_classification(receipt, launcher_code=code,
+                    launcher_pid=getattr(self.peer.process, "pid", None) if self.peer else None,
+                    legacy_known=self.launcher_sha256 is not None and self.launcher_sha256.lower() == LEGACY_LAUNCHER_SHA256)
+                if code is None:
+                    detail = {"state": "CLEANUP_PENDING", "reason": "LAUNCHER_EXIT_UNCONFIRMED"}
+                if detail["state"] == "CLOSED" and self.startup_failed:
+                    detail.update(state="FAILED_CLOSED", reason="ROUTER_STARTUP_FAILED_PROCESS_CLOSED")
+                if self.cleanup_detail and self.cleanup_detail.get("reason") == "RESOURCE_RELEASE_UNCONFIRMED":
+                    detail = {"state": "CLEANUP_PENDING", "reason": "RESOURCE_RELEASE_UNCONFIRMED"}
+                self.terminal_receipt = receipt
+            except (ToolFailure, OSError, ValueError) as error:
+                detail = {"state": "CLEANUP_PENDING", "reason": getattr(error, "code", type(error).__name__)}
+            self.state, self.cleanup_detail = detail["state"], detail
+            write_record(self.directory / ("cleanup-recheck-" + uuid4().hex + ".json"), self.record() | detail)
+            return self.record()
 
 
 class Router:
@@ -767,15 +929,149 @@ class Router:
         self.catalog = Catalog(repo, Path(sys.executable))
         self.root = repo / "proof" / "mss-universal" / "connections" / uuid4().hex
         self.apps = {}
+        self.closed_apps = {}
         self.initialized = False
         self.shared = None
         self.apps_lock = RLock()
         self.stopping = False
+        process = process_identity(os.getpid())
+        seconds, fraction = divmod(process["birth"] - 116444736000000000, 10_000_000)
+        started = datetime.fromtimestamp(seconds, timezone.utc).strftime("%Y-%m-%dT%H:%M:%S") + f".{fraction:07d}Z"
+        snapshot = globals().get("_MSS_FROZEN_STARTUP")
+        if snapshot is None:
+            snapshot = {"capture_mode": "imported_test_context_NOT_ATTESTED", "modules": {},
+                        "aggregate_sha256": None, "limitations": ["Use the actual stdio entry point for a frozen source identity."]}
+        commit = None
+        if (repo / ".git").exists():
+            try:
+                found = subprocess.run(["git", "-C", str(repo), "rev-parse", "HEAD"], capture_output=True, timeout=2,
+                                       creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                candidate = found.stdout.decode("ascii").strip()
+                if found.returncode == 0 and re.fullmatch(r"[a-f0-9]{40,64}", candidate):
+                    commit = candidate
+            except (OSError, ValueError, subprocess.TimeoutExpired):
+                pass
+        self.runtime_info = {
+            "server_pid": os.getpid(), "server_started_utc": started, "connection_id": self.root.name,
+            "mss_version": "0.1.0", "mss_commit": commit, "commit_is_runtime_revision": False,
+            "source_manifest": snapshot,
+        }
 
     def begin_shutdown(self):
         self.stopping = True
         if self.shared is not None:
             self.shared.cancel_pending()
+
+    def recheck_cleanup(self, app_id):
+        require(re.fullmatch(r"app_[a-f0-9]{32}", app_id) is not None,
+                "INVALID_ARGUMENT", "Use an exact MSS-generated App ID.")
+        completed = self.closed_apps.get(app_id)
+        if completed and completed.get("state") in TERMINAL_LIFECYCLE:
+            return completed | {"already_reconciled": True}
+        app = self.apps.get(app_id)
+        if app is not None:
+            record = app.reconcile_cleanup()
+            if record["state"] in TERMINAL_LIFECYCLE:
+                self.closed_apps[app_id] = record
+                self.apps.pop(app_id, None)
+                if self.shared is not None:
+                    try:
+                        self.shared.update_state(app_id, "CLOSED")
+                    except SharedError as error:
+                        if error.code != "UNKNOWN_APP":
+                            raise
+            return record
+        base = local_path(self.catalog.repo / "proof/mss-universal/connections", directory=True)
+        candidates = [p for p in base.glob("*/" + app_id) if p.is_dir()]
+        require(len(candidates) == 1, "UNKNOWN_APP", "Expected one recorded MSS launch; no process was targeted.")
+        directory = local_path(candidates[0], directory=True)
+        files = {}
+        for name in ("profile.json", "closure.json", "launch-failure.json"):
+            path = directory / name
+            if path.exists():
+                path = local_path(path)
+                files[name] = path.read_bytes()
+        require("profile.json" in files and any(name in files for name in ("closure.json", "launch-failure.json")),
+                "OWNERSHIP_UNVERIFIED", "No MSS launch/closure evidence. No process was targeted.")
+        metadata = json.loads(files.get("launch-failure.json", files.get("closure.json")))
+        require(metadata.get("app_id") == app_id and metadata.get("state") in {"CLEANUP_PENDING", "FAILED_CLOSED", "CLOSED"},
+                "OWNERSHIP_UNVERIFIED", "The record is not an MSS cleanup failure.")
+        profile = json.loads(files["profile.json"])
+        require(Path(profile["working_directory"]).parent == directory
+                and Path(profile["session_root"]) == directory / "sessions"
+                and profile.get("admission") == "TRUSTED_DEVELOPMENT",
+                "OWNERSHIP_UNVERIFIED", "Materialized profile is outside this recorded MSS launch.")
+        receipts = list((directory / "sessions").glob("*/session.json"))
+        require(len(receipts) == 1, "OWNERSHIP_UNVERIFIED", "Expected one launch receipt.")
+        receipt_path = local_path(receipts[0])
+        files[str(receipt_path.relative_to(directory))] = receipt_path.read_bytes()
+        receipt = json.loads(files[str(receipt_path.relative_to(directory))])
+        require(receipt["profile_sha256"].lower() == hashlib.sha256(files["profile.json"]).hexdigest()
+                and receipt["app_sha256"].lower() == profile["app_sha256"].lower()
+                and receipt["remote_sha256"].lower() == profile["remote_sha256"].lower()
+                and receipt["makepad_revision_declared"] == profile["makepad_revision"]
+                and receipt.get("profile_id") == profile["id"]
+                and receipt_path.parent.name == profile["id"] + "-" + receipt["session_id"]
+                and re.fullmatch(r"[a-f0-9]{32}", receipt["session_id"]) is not None,
+                "OWNERSHIP_UNVERIFIED", "Profile, receipt and launch session do not agree.")
+        for field, value in (("pid", receipt.get("app_pid")), ("app_birth_utc", receipt.get("app_birth_utc"))):
+            require(metadata.get(field) in (None, value), "OWNERSHIP_UNVERIFIED", "Archived process binding conflicts.")
+        expected_image = profile["app_executable"]
+        require(receipt.get("app_image_expected", receipt.get("app_image", expected_image)) == expected_image
+                and receipt.get("app_image") in (None, expected_image),
+                "OWNERSHIP_UNVERIFIED", "Archived executable binding conflicts.")
+        evidence = {name: hashlib.sha256(value).hexdigest() for name, value in files.items()}
+        latest_path = directory / "cleanup-reconciliation.json"
+        legacy_known = False  # Legacy exit authority requires a separate review.
+        detail = cleanup_classification(receipt, legacy_known=legacy_known)
+        if not legacy_known and "exit_proof" not in receipt and receipt.get("cleanup") == "GRACEFUL":
+            detail = {"state": "CLEANUP_PENDING", "reason": "LEGACY_LAUNCHER_PROVENANCE_NOT_VERIFIED"}
+        if detail["state"] == "CLOSED" and metadata.get("startup_failed") is True:
+            detail.update(state="FAILED_CLOSED", reason="ROUTER_STARTUP_FAILED_PROCESS_CLOSED")
+        if latest_path.exists():
+            previous = json.loads(local_path(latest_path).read_bytes())
+            if (detail["state"] in TERMINAL_LIFECYCLE and previous.get("state") == detail["state"]
+                    and previous.get("source_evidence") == evidence):
+                self.closed_apps[app_id] = previous
+                return previous | {"already_reconciled": True}
+        observation = {"kind": "NOT_QUERIED", "no_process_action": True}
+        if detail["state"] in TERMINAL_LIFECYCLE:
+            try:
+                from mss_process import birth_ticks
+                current = process_identity(receipt["app_pid"])
+                if current["birth"] == birth_ticks(receipt["app_birth_utc"]):
+                    observation["kind"] = "ORIGINAL_PROCESS_STILL_LIVE"
+                    detail = {"state": "CLEANUP_PENDING", "reason": "EXIT_RECEIPT_CONTRADICTS_LIVE_ORIGINAL"}
+                else:
+                    observation["kind"] = "PID_REUSED_NO_AUTHORITY_OVER_REPLACEMENT"
+            except OSError as error:
+                if error.errno == 87:  # ERROR_INVALID_PARAMETER: PID absent; receipt still supplies the exit proof.
+                    observation["kind"] = "PID_ABSENT_BOUND_EXIT_RECEIPT_REQUIRED"
+                else:
+                    observation.update(kind="QUERY_UNAVAILABLE", error_code=error.errno)
+                    detail = {"state": "CLEANUP_PENDING", "reason": "CURRENT_IDENTITY_QUERY_UNAVAILABLE"}
+        record = {"app_id": app_id, "profile": metadata.get("profile"), **detail,
+                  "pid": receipt.get("app_pid"), "app_birth_utc": receipt.get("app_birth_utc"),
+                  "app_image_expected": expected_image, "app_sha256": receipt["app_sha256"],
+                  "launcher_receipt": str(receipt_path), "source_evidence": evidence,
+                  "legacy_source_sha256": LEGACY_LAUNCHER_SHA256 if legacy_known else None,
+                  "observation": observation, "reviewed_utc": datetime.now(timezone.utc).isoformat(),
+                  "evidence_trust": "Trusted local MSS receipt files, not a cryptographically signed OS attestation."}
+        # Append immutable review evidence; preserve the original receipt/closure/failure.
+        review_path = directory / ("cleanup-reconciliation-" + uuid4().hex + ".json")
+        with review_path.open("xb") as stream:
+            stream.write(json_bytes(record))
+        if latest_path.exists():
+            archive = directory / ("cleanup-reconciliation-prior-" + uuid4().hex + ".json")
+            with archive.open("xb") as stream:
+                stream.write(local_path(latest_path).read_bytes())
+        temporary = directory / ("cleanup-reconciliation-" + uuid4().hex + ".tmp")
+        with temporary.open("xb") as stream:
+            stream.write(json_bytes(record))
+        os.replace(temporary, latest_path)
+        if record["state"] in TERMINAL_LIFECYCLE:
+            self.closed_apps[app_id] = record
+        return record
 
     def store(self):
         with self.apps_lock:
@@ -801,7 +1097,9 @@ class Router:
                 any(op["state"] == "RUNNING" for op in operations))
 
     def publish(self, app):
-        self.store().publish(app.app_id, app.record() | {
+        record = {key: value for key, value in app.record().items()
+                  if key not in {"cleanup_reason", "launcher_start_attempted", "startup_failed"}}
+        self.store().publish(app.app_id, record | {
             "directory": str(app.directory), "os_identity": app.os_identity,
             "identity": app.identity, "native_tools": sorted(app.native_tools),
         })
@@ -986,6 +1284,10 @@ class Router:
         validate(name, args)
         require(not getattr(self, "stopping", False) or name == "mss_close_app",
                 "CONNECTION_CLOSING", "This connection is closing.")
+        if name == "mss_server_info":
+            return result_json(json.loads(json.dumps(self.runtime_info)))
+        if name == "mss_recheck_cleanup":
+            return result_json(self.recheck_cleanup(args["app_id"]))
         if name == "mss_list_instances":
             rows = self.store().list_instances()
             fields = ("app_id", "profile", "state", "pid", "app_birth_utc", "app_sha256", "build_id",
@@ -1045,6 +1347,8 @@ class Router:
             return result_json(self.catalog.build_registry(args["profile"]).rollback(args["expected_active"]))
         if name == "mss_find_app":
             if "app_id" in args:
+                if args["app_id"] in getattr(self, "closed_apps", {}):
+                    return result_json({"apps": [self.closed_apps[args["app_id"]]]})
                 candidates = [self.get_app(args["app_id"])]
             else:
                 candidates = list(self.apps.values())
@@ -1056,6 +1360,9 @@ class Router:
                 if getattr(self, "shared", None) is not None:
                     record["state"] = self.shared.app(app.app_id)["state"]
                 records.append(record)
+            if "app_id" not in args:
+                records.extend(record for record in getattr(self, "closed_apps", {}).values()
+                               if "profile" not in args or args["profile"] == record.get("profile"))
             return result_json({"apps": records})
         if name == "mss_launch_app":
             require(args["profile"] in {item["profile"] for item in self.catalog.apps()},
@@ -1068,8 +1375,11 @@ class Router:
                 app.start(self.catalog)
                 self.publish(app)
             except Exception as error:
+                app.startup_failed = True
                 try:
                     app.close()
+                    if app.state == "FAILED_CLOSED":
+                        self.closed_apps[app_id] = app.record()
                     self.apps.pop(app_id)
                 except ToolFailure:
                     pass
@@ -1079,8 +1389,12 @@ class Router:
                     })
                 if isinstance(error, BuildError):
                     raise
-                raise ToolFailure("LAUNCH_FAILED", f"Launch did not qualify. Owned run: {app.directory}") from error
+                return result_json({"code": "LAUNCH_FAILED", "message": "Launch did not qualify; no GUI action was retried.",
+                                    **app.record()}, error=True)
             return result_json(app.record())
+        completed = getattr(self, "closed_apps", {}).get(args["app_id"])
+        if completed and name in {"mss_close_app", "mss_status"}:
+            return result_json(completed | {"already_closed": True, "w": []})
         app = self.get_app(args["app_id"])
         self.permission(app.app_id, control=name in MUTATIONS and name != "mss_close_app", owner=name == "mss_close_app")
         if getattr(self, "shared", None) is not None:
@@ -1092,7 +1406,9 @@ class Router:
         if name == "mss_close_app":
             def close_owned():
                 closed = app.close()
-                self.shared.update_state(app.app_id, closed["state"])
+                self.shared.update_state(app.app_id, "CLOSED" if closed["state"] == "FAILED_CLOSED" else closed["state"])
+                if closed["state"] == "FAILED_CLOSED":
+                    self.closed_apps[app.app_id] = closed
                 del self.apps[app.app_id]
                 return result_json(closed)
             return self.queued(app, name, args, close_owned)
@@ -1157,7 +1473,12 @@ class Router:
                     ok = False
                 continue
             if app.cleanup_started:
-                ok &= app.state == "CLOSED"
+                if app.state not in TERMINAL_LIFECYCLE:
+                    try:
+                        app.reconcile_cleanup()
+                    except (ToolFailure, OSError):
+                        pass
+                ok &= app.state in TERMINAL_LIFECYCLE
                 continue
             try:
                 outcome = self.run_tool("mss_close_app", {"app_id": app.app_id, "queue_timeout_ms": 30000})
@@ -1278,4 +1599,3 @@ if __name__ == "__main__":
     except (OSError, ValueError, RuntimeError) as error:
         print(f"[mss] Startup failed: {type(error).__name__}", file=sys.stderr)
         raise SystemExit(1)
-

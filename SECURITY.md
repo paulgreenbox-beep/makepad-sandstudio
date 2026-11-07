@@ -2,6 +2,14 @@
 
 ## Status
 
+The source-only Python MCP connector is restricted to an operator-admitted,
+trusted-local development setup. Its receipt files and shared SQLite index are
+not signed attestations or an OS-enforced boundary against same-user processes.
+Its frozen startup hashes measure five Python modules, not the interpreter,
+launcher, app or full Git tree. Unknown legacy cleanup stays pending; no private
+migration allowlist is distributed. See [scope and limitations](doc/mss-cleanup-source-identity.md).
+The following planned security model is not production qualification.
+
 This document states design requirements, not implemented protections. MSS has no session broker, remote gateway, permission enforcement, file broker, process supervisor, or OS sandbox yet. All such controls are NOT_VERIFIED.
 
 ## Trust boundaries

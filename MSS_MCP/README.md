@@ -14,4 +14,20 @@ Expose MSS capabilities to Codex, Claude, Cline, OpenCode, and other compatible 
 
 ## Current state
 
-No MCP server, tools, transport, or client integration is implemented. The intended standard MCP version and transport profiles require review before implementation.
+The Rust library remains an architecture placeholder. `tools/` now publishes the
+existing trusted-local Windows stdio connector and its launcher. This Python
+connector delegates UI operations to the official Makepad Remote executable;
+it does **not yet call MSS_API**. Its connection-local lifecycle and shared
+registry are a transitional implementation, not proof of the planned Rust
+authorization boundary or a production sandbox.
+
+The source introduction is required because main did not contain this local
+connector. It includes the existing build/shared/transfer helpers needed by the
+router, without changing their GUI contracts. The following repair adds retained
+process-handle identity, failed-launch reconciliation and frozen source identity.
+No local application profiles, credentials, runtime executables or private
+evidence are distributed. Existing Rust PRs remain independent review inputs.
+
+See [setup, lifecycle and identity contract](../doc/mss-cleanup-source-identity.md)
+for reproduction and explicit limitations. No installation or MCP reconnection
+is performed by this source change.

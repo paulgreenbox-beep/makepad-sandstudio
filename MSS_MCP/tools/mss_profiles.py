@@ -103,7 +103,10 @@ class Catalog:
             raise ValueError("Unsupported MSS catalog schema")
         self.launcher = self.repo_file(LAUNCHER_PATH)
         self.launcher_sha256 = catalog["launcher_sha256"]
-        self.pwsh = local_path(python.parent.parent / "native/powershell/pwsh.exe")
+        # Operator-owned catalog, never a tool argument or a PATH lookup.
+        # Retain the established bundled-runtime default for existing catalogs.
+        self.pwsh = local_path(catalog.get(
+            "pwsh_executable", python.parent.parent / "native/powershell/pwsh.exe"))
         self.pwsh_sha256 = catalog["pwsh_sha256"]
         self.entries = {}
         for entry in catalog["profiles"]:

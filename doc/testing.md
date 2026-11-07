@@ -1,5 +1,25 @@
 # Testing and Toolkit parity
 
+## Source-only MCP lifecycle follow-up
+
+The original scaffold results below remain historical. The Python connector is
+now introduced separately from the Rust implementation. See
+[the bounded lifecycle/identity protocol](mss-cleanup-source-identity.md) and
+[source-bound publication record](cronica/20261107-mss-cleanup-source-publication.json).
+
+| Contract | Owner | Reproducible check | Evidence level |
+| --- | --- | --- | --- |
+| Failed launch with bound exit vs unknown cleanup; repeat and neighbor safety | MSS_MCP launcher/router | `test_mss_cleanup.py` | Model-free policy/receipt fixtures |
+| Frozen five-module identity survives disk changes; two connection IDs | MSS_MCP router | `test_mss_startup_manifest.py` | Real copied stdio processes; no app |
+| Retained handle after fast exit; PID/birth mismatch rejected | MSS_MCP launcher | `Test-RetainedProcessIdentity.ps1` | Windows own helper process; no Makepad |
+| Operator-selected PowerShell path remains pinned | MSS_MCP profile adapter | `test_mss_catalog_runtime.py` | Local non-executable file fixtures |
+| Existing build/shared/transfer contracts | MSS_MCP prerequisite helpers | `test_mss_builds.py`, `test_mss_shared_router.py`, `test_mss_shared_store.py`, `test_mss_transfer.py` | Model-free policy fixtures |
+| Tool routing refuses foreign apps/invalid windows | MSS_MCP adapter | `gui_tools.rs` | Real copied empty-profile MCP; no app |
+
+These checks do not establish MSS_API integration, process sandboxing, GUI
+postconditions, native Makepad lifecycle or full Toolkit parity. Do not promote
+the historical acceptance matrix below from these lower-level results.
+
 ## Status vocabulary
 
 | Status | Meaning |
