@@ -1,0 +1,308 @@
+{
+  "started_at": "2026-10-30T15:24:47.2860072Z",
+  "cargo_build_jobs": 2,
+  "checks": [
+    {
+      "name": "metadata",
+      "result": "PASS",
+      "sha256": "2243f1eab9f65d7ff3eeabdda6cc753bc32a0645145fc9894753b1c27bf34c97",
+      "started_at": "2026-10-30T15:24:47.2961282Z",
+      "command": [
+        "cargo",
+        "metadata",
+        "--no-deps",
+        "--format-version",
+        "1",
+        "--locked",
+        "--offline"
+      ],
+      "ended_at": "2026-10-30T15:24:47.3876435Z",
+      "evidence_ref": "local-evidence:mss-core-3ca93bb-metadata.log",
+      "exit_code": 0
+    },
+    {
+      "name": "core-fmt",
+      "result": "PASS",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "started_at": "2026-10-30T15:24:47.3971935Z",
+      "command": [
+        "cargo",
+        "fmt",
+        "-p",
+        "mss-core",
+        "--",
+        "--check"
+      ],
+      "ended_at": "2026-10-30T15:24:47.5668612Z",
+      "evidence_ref": "local-evidence:mss-core-3ca93bb-core-fmt.log",
+      "exit_code": 0
+    },
+    {
+      "name": "core-test",
+      "result": "PASS",
+      "sha256": "9fdda58ebd092a4ea67ad66455d309dba6b0d64c980a8d03e52d700417a04b2a",
+      "started_at": "2026-10-30T15:24:47.5679485Z",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "mss-core",
+        "--locked",
+        "--offline"
+      ],
+      "ended_at": "2026-10-30T15:24:48.3169156Z",
+      "evidence_ref": "local-evidence:mss-core-3ca93bb-core-test.log",
+      "exit_code": 0
+    },
+    {
+      "name": "core-check",
+      "result": "PASS",
+      "sha256": "6a622a2dd52e6a4b5d61d55640f72e92776961ddd859d85342d22a8222be1839",
+      "started_at": "2026-10-30T15:24:48.3180031Z",
+      "command": [
+        "cargo",
+        "check",
+        "-p",
+        "mss-core",
+        "--all-targets",
+        "--locked",
+        "--offline"
+      ],
+      "ended_at": "2026-10-30T15:24:48.7370842Z",
+      "evidence_ref": "local-evidence:mss-core-3ca93bb-core-check.log",
+      "exit_code": 0
+    },
+    {
+      "name": "workspace-fmt",
+      "result": "PASS",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "started_at": "2026-10-30T15:24:48.7381054Z",
+      "command": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "ended_at": "2026-10-30T15:24:48.916011Z",
+      "evidence_ref": "local-evidence:mss-core-3ca93bb-workspace-fmt.log",
+      "exit_code": 0
+    },
+    {
+      "name": "workspace-check",
+      "result": "PASS",
+      "sha256": "6e97e703e27f64ac88c1e5da6b2e6a34482f78aeb070db4f24e31b2171c14a59",
+      "started_at": "2026-10-30T15:24:48.9170413Z",
+      "command": [
+        "cargo",
+        "check",
+        "--workspace",
+        "--all-targets",
+        "--locked",
+        "--offline"
+      ],
+      "ended_at": "2026-10-30T15:25:18.6016007Z",
+      "evidence_ref": "local-evidence:mss-core-3ca93bb-workspace-check.log",
+      "exit_code": 0
+    },
+    {
+      "name": "workspace-test",
+      "result": "PASS",
+      "sha256": "b2cc27fc0f43541d9daf8bc4d102a34e06dbf2f4787d82fd8a4f41b6070fdca3",
+      "started_at": "2026-10-30T15:25:18.6049554Z",
+      "command": [
+        "cargo",
+        "test",
+        "--workspace",
+        "--locked",
+        "--offline"
+      ],
+      "ended_at": "2026-10-30T15:26:30.9053765Z",
+      "evidence_ref": "local-evidence:mss-core-3ca93bb-workspace-test.log",
+      "exit_code": 0
+    },
+    {
+      "name": "diff",
+      "result": "PASS",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "started_at": "2026-10-30T15:26:30.9065859Z",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "ended_at": "2026-10-30T15:26:30.9580783Z",
+      "evidence_ref": "local-evidence:mss-core-3ca93bb-diff.log",
+      "exit_code": 0
+    }
+  ],
+  "ended_at": "2026-10-30T15:26:30.9588101Z",
+  "source_commit": "3ca93bbc94823651b0974d09e85cee1f37196251",
+  "cargo_net_offline": true,
+  "schema": "mss-core-development-evidence-v1",
+  "entry_kind": "unmanaged Cronica development record; not a production check receipt or managed Dungeon index",
+  "owner_module": "mss.core",
+  "object_id": "mss.core",
+  "pr_url": "https://github.com/paulgreenbox-beep/makepad-sandstudio/pull/1",
+  "original_pr_head": "75e39070f0ac12ac314bff5e627da56675c55f99",
+  "main_baseline": "83ff50112fbbdc1cd2a43ccd2ac1650504394a67",
+  "integration_commit": "e115a20a8cc3e500df99b0665c19152f5d7ef338",
+  "integration_method": "nonrewriting merge of current main into the existing PR branch; no other PR branch changed",
+  "goal_reference": {
+    "definition_url": "https://github.com/paulgreenbox-beep/makepad-sandstudio/blob/9c0e867f8844a6bc7949c7705db5c2cbbb65ef1c/goals/MSS-002.json",
+    "registry_pr": 5,
+    "registry_status": "IN_REVIEW",
+    "note": "The GOAL registry is a separate unmerged PR. Its original Core source pointer remains historical and must be refreshed in its own integration; this record does not change that branch or self-assign VERIFIED.",
+    "id": "MSS-002"
+  },
+  "scope": {
+    "original_assertions_preserved": 27,
+    "public_api_changed": false,
+    "added_tests": 5,
+    "original_tests_preserved": 7,
+    "implementation": "single in-memory logical session registry",
+    "registry_namespace": "one registry only; IDs can collide across independent registries and are not external credentials",
+    "dependency_manifest_or_lock_changed_vs_main": false,
+    "makepad_revision": "130be1d0318adcf69453d925342607466353152c",
+    "production_behavior_changed": false
+  },
+  "environment": {
+    "cargo_net_offline": true,
+    "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+    "administrator": false,
+    "windows_build": 26300,
+    "cargo": "cargo 1.97.1 (c980f4866 2026-06-30)",
+    "cargo_build_jobs": 2
+  },
+  "test_cases": [
+    {
+      "result": "PASS",
+      "test": "tests::agent_allocator_exhaustion_preserves_state_and_never_wraps"
+    },
+    {
+      "result": "PASS",
+      "test": "tests::closing_unselected_owned_neighbor_preserves_selection"
+    },
+    {
+      "result": "PASS",
+      "test": "tests::exact_handle_refuses_stale_generation_and_foreign_agent"
+    },
+    {
+      "result": "PASS",
+      "test": "tests::foreign_agent_cannot_close_neighbor"
+    },
+    {
+      "result": "PASS",
+      "test": "tests::foreign_registry_agent_must_not_be_assumed_globally_unique"
+    },
+    {
+      "result": "PASS",
+      "test": "tests::independent_sessions_and_unique_ids"
+    },
+    {
+      "result": "PASS",
+      "test": "tests::rejected_exact_handle_operations_preserve_sessions_and_selection"
+    },
+    {
+      "result": "PASS",
+      "test": "tests::rejects_bad_input_without_allocating_session_id"
+    },
+    {
+      "result": "PASS",
+      "test": "tests::selection_and_close_do_not_touch_neighbor"
+    },
+    {
+      "result": "PASS",
+      "test": "tests::session_allocator_exhaustion_preserves_state_and_never_wraps"
+    },
+    {
+      "result": "PASS",
+      "test": "tests::stale_ids_never_reused"
+    },
+    {
+      "result": "PASS",
+      "test": "tests::unknown_agent_does_not_create_sessions_or_consume_ids"
+    }
+  ],
+  "summary": {
+    "core_tests_failed": 0,
+    "core_tests_passed": 12,
+    "other_workspace_members_have_tests": 0,
+    "workspace_tests_ignored": 0,
+    "workspace_tests_failed": 0,
+    "workspace_tests_passed": 12,
+    "final_commands_passed": 8,
+    "workspace_members": 7,
+    "core_tests_ignored": 0
+  },
+  "baseline_observations": [
+    {
+      "failed": 0,
+      "source_commit": "e115a20a8cc3e500df99b0665c19152f5d7ef338",
+      "sha256": "3b217611452013ada801a785bfd2c1304d47b4697b43f327deb40451e1dbc2d1",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "mss-core",
+        "--lib",
+        "--locked",
+        "--offline"
+      ],
+      "result": "PASS",
+      "evidence_ref": "local-evidence:mss-core-e115a20-baseline-test.log",
+      "passed": 7
+    },
+    {
+      "source_commit": "e115a20a8cc3e500df99b0665c19152f5d7ef338",
+      "sha256": "e7b6f99f5bc9e6f32c285d5bfb377deab00b2c4f892344244fc08fe5572337ae",
+      "command": [
+        "cargo",
+        "fmt",
+        "-p",
+        "mss-core",
+        "--",
+        "--check"
+      ],
+      "result": "FAIL",
+      "evidence_ref": "local-evidence:mss-core-e115a20-format.log",
+      "exit_code": 1,
+      "reason": "Original Core source needed rustfmt; final package/workspace format checks passed after formatting"
+    }
+  ],
+  "coverage": [
+    "logical owner/generation checks and independent registry sessions",
+    "nonzero monotonic IDs, final-u64 allocation and stable exhaustion without wrap/reuse",
+    "foreign/stale/closed handle refusal preserves all live records and selection",
+    "owned selection and closing a nonselected neighbor preserve unrelated state",
+    "invalid title and unknown agent creation do not consume a session ID"
+  ],
+  "consumer_compatibility": {
+    "source_review": "public types, handle/accessor and get_owned_session contracts preserved",
+    "head": "abcf43b08a13da5fbf70ba1b66ef16de512ebcb5",
+    "combined_execution": "NOT_RUN",
+    "pr": 2,
+    "note": "Workspace tests cover this PR tree, not the separate API/Remote/Render implementations in PRs2-4."
+  },
+  "unverified": [
+    "OS process identity, birth/path/digest binding, native lifecycle and resource cleanup",
+    "External caller authentication and cross-registry/supervisor namespace isolation",
+    "Makepad GUI, actual frame rendering and addressed native input",
+    "Two real parallel Makepad application/agent/test processes",
+    "Full unchanged Rust Makepad Toolkit parity"
+  ],
+  "limits": {
+    "external_repository_edits": false,
+    "raw_logs": "Local raw logs may contain checkout/cache paths; only relative evidence refs, hashes and allowlisted result lines are published.",
+    "model_api_calls": 0,
+    "main_modified": false,
+    "gui_or_user_desktop_invoked": false,
+    "dependency_downloads": false,
+    "other_pr_branches_modified": false,
+    "native_process_supervisor_claimed": false,
+    "automatic_merge": false,
+    "full_toolkit_parity": "NOT_VERIFIED",
+    "goal_verified_assigned": false,
+    "dispatcher_enabled_by_this_task": false
+  }
+}
