@@ -1,5 +1,8 @@
 # MSS_Skills
 
-**PARTIAL.** Agent guidance is available as repository documentation. This module contains this index and its [SKLT record](mss_skills.sklt). An installable skill package and a runtime integration are planned.
+Two repository-scoped Codex skills provide task entry points.
 
-Use [AGENTS.md](../AGENTS.md) for mandatory AI Direct, Human View, admission, cleanup and evidence rules. Use the [MSS MCP tool reference](../MSS_MCP/README.md) for actual calls, [Configuration](../CONFIGURATION.md) for owner setup, and [Testing](../TESTING.md) for native Makepad UI tests. These documents grant no process permissions or credentials.
+- [mss-app-control](../.agents/skills/mss-app-control/SKILL.md) operates an admitted Makepad guest by App ID through AI Direct.
+- [mss-development](../.agents/skills/mss-development/SKILL.md) develops, tests and audits MSS.
+
+Start Codex in the MSS repository or one of its subdirectories. Use [AGENTS.md](../AGENTS.md) for mandatory rules and the [MCP catalog](../MSS_MCP/README.md) for actual calls. The [SKLT record](mss_skills.sklt) describes this module. The skills grant no process permissions or credentials.

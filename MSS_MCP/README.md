@@ -36,7 +36,7 @@ Use `tools/list` to get current argument types and tool annotations. The [router
 ### Read one instance
 
 1. Call `mss_list_apps({})` and choose an admitted profile, then `mss_launch_app({"profile":"rudraoffice"})` when the task calls for a new process. To inspect an existing explicitly shared instance, use `mss_list_instances({})` and `mss_attach_app({"app_id":"<app_id>"})`.
-2. Call `mss_status({"app_id":"<app_id>"})`. Use the current app window from that reply. For example, `mss_ui_tree({"app_id":"<app_id>","w":"0"})` and `mss_grab({"app_id":"<app_id>","w":0,"scale":1})` use window 0 when that is the returned window. Semantic selectors use a string `w`, while raw input, resize and grabs use a numeric `w`.
+2. Call `mss_status({"app_id":"<app_id>"})`. Use the current app window from that reply. Use `mss_ui_tree({"app_id":"<app_id>"})` to discover semantic windows. Semantic actions and text replacement require the exact `trees[].window` string and `nodes[].id`. Raw input, resize and grabs use the numeric `mss_status.w[].i`. For example, call `mss_grab({"app_id":"<app_id>","w":0,"scale":1})` when the returned status identifies window 0.
 3. For an authorized mutation, find a current node and use an advertised action on its owning window. Independently read the affected state. Treat a genuine `capture_kind=pixels` PNG as visual evidence and bind it to App ID, window and frame receipt. Read logs and operation status when qualifying a result.
 4. Detach an attachment with `mss_detach_app`. Close an owned instance with `mss_close_app` and inspect its cleanup result. For lost or uncertain responses, follow [AGENTS.md](../AGENTS.md) and use metadata/independent observation before any recovery decision.
 
