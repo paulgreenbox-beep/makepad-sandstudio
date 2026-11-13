@@ -4,3 +4,4 @@
 - App capabilities depend on their exact Makepad and Remote build. RudraOffice and AI CAD are external. The DWG configuration and worker are excluded from the preview payload.
 - Codex package delivery was demonstrated in the local development bundle. Delivery requires saved Codex sign-in and is separate from live AI Direct. The bounded package analysis exposes no live app controls. Unknown outcomes are preserved.
 - Installer acceptance requires an exact resource inventory, reviewed redistribution rights, and a setup/uninstall run. A relocated program on the development host is a limited portability check.
+- Use a short local MSS data root. On the tested host, RudraOffice Remote readiness failed with a 292-character discovery path and passed at 259 characters. The exact cause and supported maximum path length remain unverified.

@@ -137,3 +137,7 @@ Lower layers do not replace a required higher layer. Tests must not launch or de
 On 2026-10-30, `cargo metadata --no-deps --format-version 1` and `cargo check --workspace --all-targets` passed for the seven-member workspace using the exact Makepad revision recorded in `Cargo.lock`. `cargo fmt --all -- --check` and `git diff --check` also passed. Cargo reported duplicate package names inside the pinned Makepad source tree and copied incremental-cache files where hard links were unavailable; these warnings did not prevent the check from completing.
 
 No MSS behavioral test has run. The complete unchanged Toolkit regression suite remains NOT_RUN for this architecture-scaffold task. Runtime, GUI, multi-session, addressed-input, rendering, MCP, and cleanup acceptance remain NOT_VERIFIED as shown in the matrix above.
+
+## Windows source preview
+
+The preview uses a separately configured user data root and the existing launcher. The targeted Windows verification covers an empty relocated Desktop and MCP catalog, discovery and attachment to an explicitly admitted external RudraOffice, a matching native and displayed frame, detach, and owned process cleanup. A shorter data root succeeded after two readiness failures with longer paths. Clean-machine qualification and the binary redistribution inventory remain open.
