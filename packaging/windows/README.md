@@ -12,16 +12,18 @@ $env:CARGO_PROFILE_RELEASE_STRIP = 'symbols'
 cargo build -p mss-desktop --release --locked --target-dir $packageTarget
 ```
 
-Use a fresh staging directory. Stage the packaged `mss-desktop.exe`, `LICENSE`, `THIRD_PARTY_NOTICES.md`, and `CONFIGURATION.md` at the payload root. Stage the five MSS Python modules and `Start-MakepadMcp.ps1` under `MSS_MCP/tools`, and stage the five reviewed license and inventory files from `packaging/windows/licenses` under `licenses`.
+Use a fresh staging directory and a physical Windows build root outside any developer profile. Put the source, Cargo home and target under that neutral root. Run the PE privacy scan against the exact EXE, including the developer profile prefix, Windows account paths and absolute PDB paths. Stage the packaged `mss-desktop.exe`, `LICENSE`, `THIRD_PARTY_NOTICES.md`, and `CONFIGURATION.md` at the payload root. Stage the five MSS Python modules and `Start-MakepadMcp.ps1` under `MSS_MCP/tools`, and stage the five reviewed license and inventory files from `packaging/windows/licenses` under `licenses`.
 
 The pinned Makepad loader resolves the packaged paths relative to the executable when launched from an unrelated working directory. The staging script checks the PE's exact International font manifest and the SHA-256 of each required font, then copies nine files under `resources/makepad_widgets/resources` beside the executable. The pinned theme SVGs are embedded by Makepad.
 
 ```powershell
 & $python -I -B packaging/windows/stage_makepad_resources.py `
-    --exe "$payload/mss-desktop.exe" --makepad-checkout $makepadCheckout --payload $payload
+    --exe "$payload/mss-desktop.exe" --makepad-checkout $makepadCheckout --publisher-fonts $publisherFonts --payload $payload
 & $candle -nologo -arch x64 "-dPayloadDir=$payload" -out $object packaging/windows/MSS.wxs
 & $light -nologo -out $msi $object
 ```
+
+Set `$publisherFonts` to a directory containing the four unmodified publisher TTFs identified by source and SHA-256 in [the component inventory](licenses/COMPONENTS.json). Staging refuses any different bytes. Keep the expected Makepad filenames, including `LiberationMono-Regular.ttf`, so that the pinned resource keys continue to resolve. The OFL Liberation Mono 2.1.5 file omits U+2011.
 
 Set the tool variables to approved executables. Use the checkout at `130be1d0318adcf69453d925342607466353152c` for `$makepadCheckout`, and set `$object` and `$msi` to local output paths. Keep the staging receipt with the package verification evidence. MSI ProductVersion is `0.1.1`, while the display and source version is `0.1.0-preview.1`.
 

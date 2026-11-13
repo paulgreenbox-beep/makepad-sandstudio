@@ -22,6 +22,15 @@ FONT_SHA256 = {
 }
 
 
+# Exact unmodified publisher binaries for the corresponding Makepad asset slots.
+PUBLISHER_FONT_SHA256 = {
+    "IBMPlexSans-Italic.ttf": "395956f8597ccfedf776655f7e23288a4d039e22c1c5ac8f05fb688d98eec933",
+    "IBMPlexSans-BoldItalic.ttf": "bd996b25c7e82c8aa8afd0913fdcc593f62ef1976ad1aba81f311c9f2195bc01",
+    "LiberationMono-Regular.ttf": "f2b83c763e8afd21709333370bed4774337fae82267937e2b5aea7e2fbd922c1",
+    "fa-solid-900.ttf": "af19d135d3a935b3ebfbd80320716ffe1202052c5f68dc2c5f1abc57005ac605"
+}
+
+
 def font_manifest(pe):
     pe_offset = struct.unpack_from("<I", pe, 0x3C)[0]
     if pe[:2] != b"MZ" or pe[pe_offset : pe_offset + 4] != b"PE\x00\x00":
@@ -53,15 +62,19 @@ def sha256(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def stage(exe, checkout, payload):
+def stage(exe, checkout, publisher_fonts, payload):
     desktop = exe.read_bytes()
     manifest = font_manifest(desktop)
     assets = {}
     for name, expected_hash in FONT_SHA256.items():
-        source = checkout / "widgets" / "resources" / name
+        if name in PUBLISHER_FONT_SHA256:
+            source = publisher_fonts / name
+            expected_hash = PUBLISHER_FONT_SHA256[name]
+        else:
+            source = checkout / "widgets" / "resources" / name
         data = source.read_bytes()
         if sha256(data) != expected_hash:
-            raise ValueError(f"{name} does not match the pinned Makepad resource SHA-256")
+            raise ValueError(f"{name} does not match the approved source SHA-256")
         assets[name] = data
 
     directory = payload / "resources" / FONT_DIR
@@ -77,7 +90,8 @@ def stage(exe, checkout, payload):
             {
                 "path": f"resources/{FONT_DIR / name}",
                 "bytes": len(data),
-                "sha256": FONT_SHA256[name],
+                "sha256": sha256(data),
+                "source": "publisher" if name in PUBLISHER_FONT_SHA256 else "makepad",
             }
             for name, data in assets.items()
         ],
@@ -88,10 +102,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--exe", type=Path, required=True)
     parser.add_argument("--makepad-checkout", type=Path, required=True)
+    parser.add_argument("--publisher-fonts", type=Path, required=True)
     parser.add_argument("--payload", type=Path, required=True)
     args = parser.parse_args()
     try:
-        receipt = stage(args.exe, args.makepad_checkout, args.payload)
+        receipt = stage(args.exe, args.makepad_checkout, args.publisher_fonts, args.payload)
     except (OSError, ValueError, struct.error) as error:
         parser.exit(1, f"cannot stage Makepad resources: {error}\n")
     print(json.dumps(receipt, indent=2))

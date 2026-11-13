@@ -50,72 +50,69 @@
     },
     {
       "path": "resources/makepad_widgets/resources/IBMPlexSans-Italic.ttf",
-      "bytes": 184020,
-      "sha256": "21effb0b8dabbbd6548db1c581c68c6335f6ffaabd6946a6a73ade24dec050eb",
+      "bytes": 189000,
+      "sha256": "395956f8597ccfedf776655f7e23288a4d039e22c1c5ac8f05fb688d98eec933",
       "sfnt_names": {
         "0": "Copyright 2018 IBM Corp. All rights reserved.",
         "1": "IBM Plex Sans",
-        "3": "3.2;IBM ;IBMPlexSans-Italic",
-        "5": "Version 3.2",
+        "3": "3.3;IBM ;IBMPlexSans-Italic",
+        "5": "Version 3.3",
         "13": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: http://scripts.sil.org/OFL",
         "14": "http://scripts.sil.org/OFL"
       },
       "license": "SIL-OFL-1.1",
       "notice": "IBM-Plex-Sans-OFL.txt",
       "upstream_comparison": {
-        "status": "exact_binary_origin_not_verified",
-        "license_basis": "embedded name records identify the IBM original family, copyright and SIL OFL 1.1"
+        "status": "unmodified_publisher_binary",
+        "source": "https://raw.githubusercontent.com/IBM/plex/5be844361a10980927f4ccfb52297efb9fc90a64/IBM-Plex-Sans/fonts/complete/ttf/IBMPlexSans-Italic.ttf"
       }
     },
     {
       "path": "resources/makepad_widgets/resources/IBMPlexSans-BoldItalic.ttf",
-      "bytes": 184656,
-      "sha256": "451f1e35cf09ef4411c9f38e7eb7d4967aef427c52e048dff26cc36393937882",
+      "bytes": 189780,
+      "sha256": "bd996b25c7e82c8aa8afd0913fdcc593f62ef1976ad1aba81f311c9f2195bc01",
       "sfnt_names": {
         "0": "Copyright 2018 IBM Corp. All rights reserved.",
         "1": "IBM Plex Sans",
-        "3": "3.2;IBM ;IBMPlexSans-BoldItalic",
-        "5": "Version 3.2",
+        "3": "3.3;IBM ;IBMPlexSans-BoldItalic",
+        "5": "Version 3.3",
         "13": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: http://scripts.sil.org/OFL",
         "14": "http://scripts.sil.org/OFL"
       },
       "license": "SIL-OFL-1.1",
       "notice": "IBM-Plex-Sans-OFL.txt",
       "upstream_comparison": {
-        "status": "exact_binary_origin_not_verified",
-        "license_basis": "embedded name records identify the IBM original family, copyright and SIL OFL 1.1"
+        "status": "unmodified_publisher_binary",
+        "source": "https://raw.githubusercontent.com/IBM/plex/5be844361a10980927f4ccfb52297efb9fc90a64/IBM-Plex-Sans/fonts/complete/ttf/IBMPlexSans-BoldItalic.ttf"
       }
     },
     {
       "path": "resources/makepad_widgets/resources/LiberationMono-Regular.ttf",
-      "bytes": 108168,
-      "sha256": "3e396ddd3d1c7d3dca1fb16dd64802b32f295f856ac10c0c1f2ab1c738196045",
+      "bytes": 319508,
+      "sha256": "f2b83c763e8afd21709333370bed4774337fae82267937e2b5aea7e2fbd922c1",
       "sfnt_names": {
-        "0": "Digitized data © 2007 Ascender Corporation. All rights reserved.",
+        "0": "Digitized data copyright (c) 2010 Google Corporation.\nCopyright (c) 2012 Red Hat, Inc.",
         "1": "Liberation Mono",
-        "3": "FontForge 2.0 : Liberation Mono Regular : 12-1-2009",
-        "5": "Version 1.04",
-        "13": "Use of this Liberation font software is subject to the license agreement under which you accepted the Liberation font software.",
-        "14": "http://www.ascendercorp.com/liberation.html"
+        "3": "Ascender - Liberation Mono",
+        "5": "Version 2.1.5",
+        "13": "Licensed under the SIL Open Font License, Version 1.1",
+        "14": "http://scripts.sil.org/OFL"
       },
-      "license": "GPL-2.0 with Red Hat Liberation Font Software exceptions; exact corresponding source BLOCKED",
-      "notice": "Liberation-Fonts-1.04-License.txt",
+      "license": "SIL-OFL-1.1",
+      "notice": "Liberation-Mono-2.1.5-OFL.txt",
       "upstream_comparison": {
-        "status": "corresponding_source_and_distribution_route_blocked",
-        "historical_1_04_ttf_sha256": "b9235ede844d45cecc2b842198cac7a507cd7f91f68c5584c40ac80ecf495492",
-        "near_match_1_04_93_devel_ttf_sha256": "cce17a4f9029c2d7c4216738bd49d9d156f518820b01ebc35fc9dea82116abc2",
-        "near_match_different_tables": [
-          "head",
-          "name"
-        ],
-        "source_archive_sha256": "1cf46049ecde9551440d2227eeb3f896d7dfe17c915561d080942a89484cf4d2",
-        "source_archive": "https://archive.debian.org/debian/pool/main/t/ttf-liberation/ttf-liberation_1.04.93.orig.tar.gz"
+        "status": "unmodified_publisher_binary",
+        "version": "2.1.5",
+        "revision": "4b0192046158094654e865245832c66d2104219e",
+        "publisher_archive": "https://github.com/liberationfonts/liberation-fonts/files/7261482/liberation-fonts-ttf-2.1.5.tar.gz",
+        "archive_url": "https://src.fedoraproject.org/repo/pkgs/liberation-fonts/liberation-fonts-ttf-2.1.5.tar.gz/sha512/b9f178fae43c9214ba6de36c6da613fcf59bd98084058afaaa9151d00f2406942bc360430be0a8f35ea6b5529146eef371c7cf75bdd7910403d449254f943fed/liberation-fonts-ttf-2.1.5.tar.gz",
+        "archive_sha512": "b9f178fae43c9214ba6de36c6da613fcf59bd98084058afaaa9151d00f2406942bc360430be0a8f35ea6b5529146eef371c7cf75bdd7910403d449254f943fed"
       }
     },
     {
       "path": "resources/makepad_widgets/resources/fa-solid-900.ttf",
       "bytes": 426112,
-      "sha256": "d2f0593540b0e33ba6de255a54f272d466e31144806956bea8cfdbf7edffc9bd",
+      "sha256": "af19d135d3a935b3ebfbd80320716ffe1202052c5f68dc2c5f1abc57005ac605",
       "sfnt_names": {
         "0": "Copyright (c) Font Awesome",
         "1": "Font Awesome 6 Free Solid",
@@ -125,10 +122,8 @@
       "license": "SIL-OFL-1.1",
       "notice": "Font-Awesome-Free-6.7.2-LICENSE.txt",
       "upstream_comparison": {
-        "revision": "af620534bfc3c2d4cbefcfeec29603bbe7809e64",
-        "tag": "6.7.2",
-        "official_ttf_sha256": "af19d135d3a935b3ebfbd80320716ffe1202052c5f68dc2c5f1abc57005ac605",
-        "status": "sfnt_head_checksum_and_timestamps_only"
+        "status": "unmodified_publisher_binary",
+        "source": "https://raw.githubusercontent.com/FortAwesome/Font-Awesome/af620534bfc3c2d4cbefcfeec29603bbe7809e64/webfonts/fa-solid-900.ttf"
       }
     },
     {
@@ -211,10 +206,10 @@
     "rustc",
     "MSVC SDK/toolchain"
   ],
-  "publication_status": "BLOCKED",
+  "publication_status": "LOCAL_CANDIDATE_OWNER_REVIEW_PENDING",
   "desktop_executable": {
-    "sha256": "bd1043877aeb4accb363f534953e9c8a3e7fab5a28a3c3d6e416b5bfc2cb97a1",
-    "bytes": 18206720
+    "sha256": "f698af1091db91c540a22120cea7b88e5e5b42df0b9925cc3411a33358710223",
+    "bytes": 18229760
   },
   "embedded_svg": {
     "unique_payloads": 223,
@@ -249,7 +244,14 @@
         "checked_in_extra_icon": 8
       }
     },
-    "source_revision": "130be1d0318adcf69453d925342607466353152c"
+    "source_revision": "130be1d0318adcf69453d925342607466353152c",
+    "additional_icon_license_evidence": {
+      "introduced_by": "5dc41d70227961321990cddb69e799987948e2df",
+      "later_revision": "2271c0eb350cedd497c84373f17ad2b0b662cb72",
+      "identical_git_blobs": 56,
+      "later_crate_declaration": "MIT OR Apache-2.0",
+      "independent_authorship": "NOT_VERIFIED"
+    }
   },
   "desktop_cargo_build": {
     "unit_count": 72,
