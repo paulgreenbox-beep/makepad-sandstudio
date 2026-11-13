@@ -61,9 +61,12 @@ def _digest(value, widths, label):
     return value.upper()
 
 
-def _build_id(path, sha256):
+def _build_id(path, sha256, launch_config_sha256=None):
     name = os.path.normcase(str(path))
-    return "build_" + hashlib.sha256(f"{name}\0{sha256}".encode("utf-8")).hexdigest()
+    identity = f"{name}\0{sha256}"
+    if launch_config_sha256 is not None:
+        identity += f"\0{launch_config_sha256}"
+    return "build_" + hashlib.sha256(identity.encode("utf-8")).hexdigest()
 
 
 def _verification(value):
@@ -84,23 +87,35 @@ def _no_duplicate_keys(pairs):
 
 
 class BuildRegistry:
-    def __init__(self, repo, profile_id, build_roots, template):
+    def __init__(self, repo, profile_id, build_roots, template, admissions=None):
         if not re.fullmatch(r"[a-z][a-z0-9_-]{0,63}", profile_id):
             raise BuildError("BUILD_ARGUMENT_INVALID", "Invalid build profile ID.")
         if not isinstance(build_roots, list) or not 1 <= len(build_roots) <= 16:
             raise BuildError("BUILD_PATH_DENIED", "This profile needs explicit local build roots.")
         self.profile = profile_id
         self.roots = [_local_shape(root) for root in build_roots]
+        self.admissions = None if admissions is None else dict(admissions)
         self.directory = repo / "MSS_MCP" / "profiles" / "local.builds"
         self.state_path = self.directory / f"{profile_id}.json"
         self.baseline = self._record(BASELINE, _local_shape(template["app_executable"]),
                                      _digest(template["app_sha256"], (64,), "baseline SHA-256"), None)
 
-    def _record(self, build_id, exe_path, sha256, git_sha):
-        return {
+    def _record(self, build_id, exe_path, sha256, git_sha, launch_config_sha256=None):
+        record = {
             "build_id": build_id, "profile": self.profile, "exe_path": str(exe_path),
             "sha256": sha256, "git_sha": git_sha, "verification": None,
         }
+        if launch_config_sha256 is not None:
+            record["launch_config_sha256"] = launch_config_sha256
+        return record
+
+    def _admission_digest(self, path, sha256):
+        if self.admissions is None:
+            return None
+        digest = self.admissions.get((path, sha256))
+        if digest is None:
+            raise BuildError("BUILD_NOT_ADMITTED", "The executable path and SHA-256 lack current launch admission.")
+        return _digest(digest, (64,), "launch configuration SHA-256")
 
     def _candidate_path(self, value):
         path = _local_shape(value)
@@ -115,10 +130,16 @@ class BuildRegistry:
         raise BuildError("BUILD_PATH_DENIED", "The candidate is outside this profile's allowed build roots.")
 
     def _check_pin(self, record):
+        recorded_path = _local_shape(record["exe_path"])
         if record["build_id"] == BASELINE:
-            path = _existing(_local_shape(record["exe_path"]))
+            path = _existing(recorded_path)
         else:
-            path = self._candidate_path(record["exe_path"])
+            admitted = self._admission_digest(recorded_path, record["sha256"])
+            if record.get("launch_config_sha256") != admitted:
+                raise BuildError("BUILD_NOT_ADMITTED", "The registered launch configuration is no longer admitted.")
+            path = self._candidate_path(recorded_path)
+            if self.admissions is not None and path != recorded_path:
+                raise BuildError("BUILD_NOT_ADMITTED", "The executable no longer resolves to its admitted path.")
         if path.suffix.lower() != ".exe":
             raise BuildError("BUILD_PATH_DENIED", "The profile executable must be an EXE.")
         try:
@@ -182,12 +203,21 @@ class BuildRegistry:
             raise ValueError("Invalid builds")
         paths = set()
         for key, record in builds.items():
-            if not isinstance(record, dict) or record.keys() != self.baseline.keys():
+            if not isinstance(record, dict):
+                raise ValueError("Invalid build record")
+            fields = self.baseline.keys()
+            launch_config_sha256 = None
+            if self.admissions is not None and key != BASELINE and "launch_config_sha256" in record:
+                fields = fields | {"launch_config_sha256"}
+                launch_config_sha256 = _digest(record["launch_config_sha256"], (64,), "launch configuration SHA-256")
+                if record["launch_config_sha256"] != launch_config_sha256:
+                    raise ValueError("Invalid launch configuration digest")
+            if record.keys() != fields:
                 raise ValueError("Invalid build record")
             path = _local_shape(record["exe_path"])
             sha = _digest(record["sha256"], (64,), "SHA-256")
             git = record["git_sha"]
-            expected_id = BASELINE if key == BASELINE else _build_id(path, sha)
+            expected_id = BASELINE if key == BASELINE else _build_id(path, sha, launch_config_sha256)
             if (record["build_id"] != key or key != expected_id or record["profile"] != self.profile
                     or record["exe_path"] != str(path) or record["sha256"] != sha
                     or path in paths
@@ -242,8 +272,10 @@ class BuildRegistry:
         sha256 = _digest(sha256, (64,), "SHA-256")
         git_sha = _digest(git_sha, (40, 64), "Git SHA").lower() if git_sha is not None else None
         path = self._candidate_path(exe_path)
-        build_id = _build_id(path, sha256)
-        record = self._check_pin(self._record(build_id, path, sha256, git_sha))
+        registering_baseline = self.admissions is not None and path == Path(self.baseline["exe_path"]).resolve(strict=False)
+        launch_config_sha256 = None if registering_baseline else self._admission_digest(path, sha256)
+        build_id = BASELINE if registering_baseline else _build_id(path, sha256, launch_config_sha256)
+        record = self._check_pin(self._record(build_id, path, sha256, git_sha, launch_config_sha256))
         with self._locked():
             state = self._load()
             for existing in state["builds"].values():
@@ -252,7 +284,7 @@ class BuildRegistry:
                     existing_path = existing_path.resolve(strict=False)
                 if existing_path != path:
                     continue
-                if existing["sha256"] != sha256:
+                if existing["sha256"] != sha256 or existing.get("launch_config_sha256") != launch_config_sha256:
                     raise BuildError("BUILD_CONFLICT", "This path is already pinned. Use a separate path for each build.")
                 if git_sha is not None and existing["git_sha"] != git_sha:
                     raise BuildError("BUILD_CONFLICT", "The registered build has different Git provenance.")

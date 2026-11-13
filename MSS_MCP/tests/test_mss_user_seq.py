@@ -66,8 +66,8 @@ class Queue:
         self.on_turn()
         return {'operation_id': operation_id, 'state': 'RUNNING', 'sequence': 1}
 
-    def finish(self, operation_id, state, code=None):
-        self.finished.append((state, code))
+    def finish(self, operation_id, state, code=None, effect='NOT_VERIFIED'):
+        self.finished.append((state, code, effect))
         if state == 'OUTCOME_UNKNOWN':
             self.row['state'] = state
         return {'operation_id': operation_id, 'state': state, 'sequence': 1}
@@ -156,7 +156,7 @@ class UserSequenceTests(unittest.TestCase):
         queue = self.router.shared = Queue(self.app)
         self.peer.activity = {'content': [{'type': 'text', 'text': '[' * 2000 + '0' + ']' * 2000}]}
         self.assert_refused(self.run_action(), 'REFUSED_ACTIVITY_UNAVAILABLE')
-        self.assertEqual(queue.finished, [('FAILED', 'REFUSED_ACTIVITY_UNAVAILABLE')])
+        self.assertEqual(queue.finished, [('FAILED', 'REFUSED_ACTIVITY_UNAVAILABLE', 'NOT_VERIFIED')])
 
     def test_matching_sequence_dispatched_once_with_original_native_guard(self):
         result = self.run_action()
@@ -289,7 +289,7 @@ class UserSequenceTests(unittest.TestCase):
         queue = self.router.shared = Queue(self.app)
         queue.on_turn = lambda: setattr(self.peer, 'activity', mss.result_json({'user_seq': 8}))
         self.assert_refused(self.run_action(), 'REFUSED_STALE_USER_SEQ')
-        self.assertEqual(queue.finished, [('FAILED', 'REFUSED_STALE_USER_SEQ')])
+        self.assertEqual(queue.finished, [('FAILED', 'REFUSED_STALE_USER_SEQ', 'NOT_VERIFIED')])
 
     def test_revoked_permission_is_refused_before_activity(self):
         queue = self.router.shared = Queue(self.app)
@@ -304,7 +304,7 @@ class UserSequenceTests(unittest.TestCase):
         result = self.run_action()
         self.assertTrue(result['isError'])
         self.assertEqual(result['structuredContent']['code'], 'ACCESS_DENIED')
-        self.assertEqual(queue.finished, [('FAILED', 'ACCESS_DENIED')])
+        self.assertEqual(queue.finished, [('FAILED', 'ACCESS_DENIED', 'NOT_VERIFIED')])
         self.assertEqual(self.peer.calls, [])
 
     def test_queued_postdispatch_error_marks_unknown(self):
@@ -312,7 +312,7 @@ class UserSequenceTests(unittest.TestCase):
         self.peer.action_result = NATIVE_ERROR
         result = self.run_action()
         self.assertEqual(result['structuredContent']['code'], 'OUTCOME_UNKNOWN')
-        self.assertEqual(queue.finished, [('OUTCOME_UNKNOWN', 'OUTCOME_UNKNOWN')])
+        self.assertEqual(queue.finished, [('OUTCOME_UNKNOWN', 'OUTCOME_UNKNOWN', 'NOT_VERIFIED')])
         self.assertEqual(queue.row['state'], 'OUTCOME_UNKNOWN')
         self.assertEqual(len(self.native_mutations()), 1)
 

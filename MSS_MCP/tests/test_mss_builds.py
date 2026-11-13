@@ -2,12 +2,16 @@
 
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
+import json
 import os
 from pathlib import Path
 import sys
 import tempfile
 from threading import Barrier
 import unittest
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from mss_test_fixtures import add_owned_directory_cleanup
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 from mss_builds import BuildError, BuildRegistry
@@ -19,7 +23,7 @@ VERIFICATION = {"statement": "Registry test attestation", "launcher_receipt": "f
 class BuildRegistryTests(unittest.TestCase):
     def setUp(self):
         fixture = tempfile.TemporaryDirectory()
-        self.addCleanup(fixture.cleanup)
+        add_owned_directory_cleanup(self, fixture)
         self.repo = Path(fixture.name)
         (self.repo / "MSS_MCP" / "profiles").mkdir(parents=True)
         self.root = self.repo / "approved"
@@ -40,6 +44,12 @@ class BuildRegistryTests(unittest.TestCase):
 
     def registry(self):
         return BuildRegistry(self.repo, "rudraoffice", [str(self.root)], self.template)
+
+    def cad_registry(self, admissions):
+        return BuildRegistry(self.repo, "ai-cad", [str(self.root)], self.template, admissions=admissions)
+
+    def admission(self, path, launch_config_sha256):
+        return {(path.resolve(), self.digest(path).upper()): launch_config_sha256}
 
     def register(self, path=None, git_sha=None):
         path = path or self.candidate
@@ -197,6 +207,87 @@ class BuildRegistryTests(unittest.TestCase):
         self.assert_error("UNKNOWN_BUILD", self.store.select, "unknown")
         self.assert_error("UNKNOWN_BUILD", self.store.activate, "unknown", "baseline", VERIFICATION)
         self.assertEqual(self.store.select()["build_id"], "baseline")
+
+    def test_pinned_admission_binds_configuration_to_build_identity(self):
+        config = "A" * 64
+        store = self.cad_registry(self.admission(self.candidate, config))
+        candidate = store.register(str(self.candidate), self.digest(self.candidate))
+        path = os.path.normcase(str(self.candidate.resolve()))
+        exe_sha256 = self.digest(self.candidate).upper()
+        identity = hashlib.sha256(f"{path}\0{exe_sha256}\0{config}".encode("utf-8")).hexdigest()
+        self.assertEqual(candidate["build_id"], "build_" + identity)
+        self.assertEqual(candidate["launch_config_sha256"], config)
+        self.assertEqual(store.select(candidate["build_id"]), candidate)
+        self.assertNotIn("launch_config_sha256", store.select())
+        dynamic = self.register()
+        original_identity = hashlib.sha256(f"{path}\0{exe_sha256}".encode("utf-8")).hexdigest()
+        self.assertEqual(dynamic["build_id"], "build_" + original_identity)
+        self.assertNotIn("launch_config_sha256", dynamic)
+
+    def test_pinned_registration_checks_exact_path_and_executable_digest(self):
+        store = self.cad_registry(self.admission(self.candidate, "A" * 64))
+        other = self.root / "other" / self.candidate.name
+        other.parent.mkdir()
+        other.write_bytes(self.candidate.read_bytes())
+        self.assert_error("BUILD_NOT_ADMITTED", store.register, str(other), self.digest(other))
+        self.assert_error("BUILD_NOT_ADMITTED", store.register, str(self.candidate), "B" * 64)
+        self.assertEqual(store.list()["builds"], [store.select()])
+
+    def test_revoked_configuration_lists_and_allows_rollback_to_baseline(self):
+        store = self.cad_registry(self.admission(self.candidate, "A" * 64))
+        candidate = store.register(str(self.candidate), self.digest(self.candidate))
+        build_id = candidate["build_id"]
+        store.activate(build_id, "baseline", VERIFICATION)
+        revoked = self.cad_registry({})
+        self.assertEqual(revoked.list()["active_build_id"], build_id)
+        self.assertIn(candidate | {"verification": VERIFICATION}, revoked.list()["builds"])
+        self.assert_error("BUILD_NOT_ADMITTED", revoked.select)
+        self.assert_error("BUILD_NOT_ADMITTED", revoked.select, build_id)
+        revoked.rollback(build_id)
+        self.assertEqual(revoked.select()["build_id"], "baseline")
+        self.assert_error("BUILD_NOT_ADMITTED", revoked.activate, build_id, "baseline", VERIFICATION)
+
+    def test_rollback_refuses_revoked_previous_candidate(self):
+        other = self.root / "other" / self.candidate.name
+        other.parent.mkdir()
+        other.write_bytes(b"MZ alternate admitted build")
+        kept = self.admission(other, "B" * 64)
+        store = self.cad_registry(kept | self.admission(self.candidate, "A" * 64))
+        first = store.register(str(self.candidate), self.digest(self.candidate))["build_id"]
+        second = store.register(str(other), self.digest(other))["build_id"]
+        store.activate(first, "baseline", VERIFICATION)
+        store.activate(second, first, VERIFICATION)
+        revoked = self.cad_registry(kept)
+        self.assert_error("BUILD_NOT_ADMITTED", revoked.rollback, second)
+        self.assertEqual(revoked.select()["build_id"], second)
+        self.assertEqual(revoked.list()["previous_build_id"], first)
+
+    def test_changed_policy_cannot_reuse_previously_registered_path(self):
+        store = self.cad_registry(self.admission(self.candidate, "A" * 64))
+        candidate = store.register(str(self.candidate), self.digest(self.candidate))
+        changed = self.cad_registry(self.admission(self.candidate, "B" * 64))
+        self.assertIn(candidate, changed.list()["builds"])
+        self.assert_error("BUILD_NOT_ADMITTED", changed.select, candidate["build_id"])
+        self.assert_error("BUILD_CONFLICT", changed.register, str(self.candidate), self.digest(self.candidate))
+        self.assertEqual(changed.select()["build_id"], "baseline")
+
+    def test_state_config_digest_must_match_saved_identity(self):
+        store = self.cad_registry(self.admission(self.candidate, "A" * 64))
+        build_id = store.register(str(self.candidate), self.digest(self.candidate))["build_id"]
+        state = json.loads(store.state_path.read_bytes())
+        state["builds"][build_id]["launch_config_sha256"] = "B" * 64
+        corrupted = json.dumps(state).encode("utf-8")
+        store.state_path.write_bytes(corrupted)
+        changed = self.cad_registry(self.admission(self.candidate, "B" * 64))
+        self.assert_error("BUILD_STATE_INVALID", changed.list)
+        self.assertEqual(store.state_path.read_bytes(), corrupted)
+
+    def test_legacy_record_remains_listable_but_cannot_launch_under_admission(self):
+        legacy = BuildRegistry(self.repo, "ai-cad", [str(self.root)], self.template)
+        candidate = legacy.register(str(self.candidate), self.digest(self.candidate))
+        store = self.cad_registry(self.admission(self.candidate, "A" * 64))
+        self.assertIn(candidate, store.list()["builds"])
+        self.assert_error("BUILD_NOT_ADMITTED", store.select, candidate["build_id"])
 
 
 if __name__ == "__main__":

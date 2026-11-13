@@ -17,7 +17,7 @@ from uuid import uuid4
 TERMINAL = {"APPLIED", "FAILED", "CANCELLED", "OUTCOME_UNKNOWN"}
 MUTATIONS = {
     "mss_ui_act", "mss_ui_type", "mss_ui_key", "mss_ui_mouse",
-    "mss_ui_drop", "mss_transfer_fragment",
+    "mss_ui_drop", "mss_resize", "mss_transfer_fragment",
     "mss_close_app",
     "mss_activate_build",
 }

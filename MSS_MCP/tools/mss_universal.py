@@ -60,13 +60,14 @@ import re
 import struct
 import subprocess
 import sys
+from unicodedata import category
 from datetime import datetime, timezone
 from threading import BoundedSemaphore, Event, RLock, Thread
 from time import monotonic
 from uuid import uuid4
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from mss_profiles import Catalog, LaunchPlan, SYSTEM_KEYS, check_pin, local_path
+from mss_profiles import Catalog, LaunchPlan, SYSTEM_KEYS, check_pin, local_directory, local_path
 from mss_builds import BuildError
 from mss_process import confirm_app, is_live, process_identity
 from mss_shared import SharedError, Store
@@ -82,6 +83,7 @@ QUERY = {
 QUERY.update({"nth": "integer", "depth": "integer", "json": "boolean"})
 TARGET = {"node": "string", "w": "string", "if_user_seq": "integer", "json": "boolean"}
 INPUT_WINDOW = {"w": "integer", "wait": "boolean", "if_user_seq": "integer"}
+INPUT_GEOMETRY = {key: "number" for key in ("if_layout_width", "if_layout_height", "if_dpi")}
 MODIFIERS = {key: "boolean" for key in ("ctrl", "shift", "alt")}
 POINT = {"x": "number", "y": "number"}
 POINTER_KINDS = {"move", "down", "up", "click", "scroll", "drag"}
@@ -135,21 +137,30 @@ ROUTES = {
         ("node", "w", "t"), False,
     ),
     "mss_ui_key": (
-        "ui__key", "Send a Makepad key (c=KeyA, ReturnKey, Tab, Escape, etc.) to the sole owned window. "
-        "Use numeric w from status. k is press (default), down, or up. Shared clipboard chords are blocked.",
-        INPUT_WINDOW | MODIFIERS | {"c": "string", "k": "string"}, ("w", "c"), False,
+        "ui__key", "Send exactly one Makepad key (c) or nonempty app-local text (t) to the sole owned window. "
+        "Use numeric w from status. Only c accepts k (press, down, or up) and modifiers. "
+        "Shared clipboard chords are blocked. Supply all three geometry guards together.",
+        INPUT_WINDOW | INPUT_GEOMETRY | MODIFIERS | {"c": "string", "t": "string", "k": "string"},
+        ("w",), False,
     ),
     "mss_ui_mouse": (
         "ui__mouse", "Send move, down, up, click, scroll, or drag in window-local points. Use numeric w from status. "
-        "For scroll pass dx/dy. For drag pass x1/y1 and optionally steps (1–60).",
-        INPUT_WINDOW | MODIFIERS | POINT | {"k": "string", "b": "integer", "dx": "number", "dy": "number",
-                                            "x1": "number", "y1": "number", "steps": "integer"},
+        "For scroll pass dx/dy. For drag pass x1/y1 and optionally steps (1–60). "
+        "Supply all three geometry guards together.",
+        INPUT_WINDOW | INPUT_GEOMETRY | MODIFIERS | POINT | {
+            "k": "string", "b": "integer", "dx": "number", "dy": "number",
+            "x1": "number", "y1": "number", "steps": "integer"},
         ("w", "k", "x", "y"), False,
     ),
     "mss_ui_drop": (
         "ui__drop", "Drop one existing file (basename in this app's artifact directory) on its sole window. "
         "Use numeric w from status and window-local x/y. Verify the app's response independently.",
         INPUT_WINDOW | POINT | {"file": "string"}, ("w", "file", "x", "y"), False,
+    ),
+    "mss_resize": (
+        "ui__resize", "Resize the selected owned window in layout points and verify its new pixel frame. "
+        "Use numeric w from mss_status.",
+        {"w": "integer", "width": "number", "height": "number"}, ("w", "width", "height"), False,
     ),
     "mss_ui_wait": (
         "ui__ui_wait", "Wait for a Makepad query condition, up to 15000 ms.",
@@ -165,7 +176,7 @@ ROUTES = {
         {"a": "string", "b": "string", "w": "string", "json": "boolean"}, ("a",), True,
     ),
     "mss_grab": ("ui__grab", "Capture native pixels as PNG in this session's artifacts.",
-                 {"w": "integer", "scale": "number"}, (), True),
+                 {"w": "integer", "scale": "number", "preview": "boolean"}, (), True),
     "mss_logs": ("logs__log", "Read this app's runtime log.", {"n": "integer", "since": "integer"}, (), True),
 }
 
@@ -254,9 +265,13 @@ def write_record(path, value):
     path.write_bytes(json_bytes(value))
 
 
-# No legacy launcher is admitted by this public source distribution. A private,
-# separately reviewed migration must never grant authority to another install.
-LEGACY_LAUNCHER_SHA256 = ""
+LEGACY_LAUNCHER_SHA256 = "5a1db3a7aa86e32067623d44f5bfb065689a6e1a6eeb7f501380e2869d0945d1"
+# Reviewed migration evidence, not a general assumption about every old receipt.
+REVIEWED_LEGACY_EXIT = {
+    ("app_2e6acdf2e4a744029ac9e850d9a1f96f",
+     "ef6327196dd47c73bd5d4cf6be4106f5736b703d64726089e6cffb1d417735d6",
+     "a92ae69ba991c0e1c3863b9909de3ffcb033968b2a1a3e50b416f25293a809ce"),
+}
 TERMINAL_LIFECYCLE = {"CLOSED", "FAILED_CLOSED"}
 
 
@@ -372,7 +387,7 @@ def raw_input_refusal(name, args, result):
         return None
     if refusal.get("applied") is False and error in {"user_intervened", "user_interacting"}:
         return refusal
-    if name == "mss_ui_key" and error == f"bad key code {args['c']}":
+    if name == "mss_ui_key" and "c" in args and error == f"bad key code {args['c']}":
         return refusal
     return None
 
@@ -404,6 +419,9 @@ def validate(name, args):
         require(1 <= args["n"] <= 500, "INVALID_ARGUMENT", "n must be 1–500.")
     if "scale" in args:
         require(0.25 <= args["scale"] <= 2, "INVALID_ARGUMENT", "scale must be 0.25–2.")
+    if name == "mss_resize":
+        require(args["w"] >= 0 and all(1 <= args[key] <= 16384 for key in ("width", "height")),
+                "INVALID_ARGUMENT", "Use a nonnegative window ID and width/height of 1–16384 layout points.")
     if name in RAW_INPUT:
         validate_input(name, args)
 
@@ -411,7 +429,17 @@ def validate(name, args):
 def validate_input(name, args):
     require(args["w"] >= 0 and args.get("if_user_seq", 0) >= 0,
             "INVALID_ARGUMENT", "Window and activity sequence must be nonnegative.")
+    geometry = INPUT_GEOMETRY.keys() & args.keys()
+    require(not geometry or geometry == INPUT_GEOMETRY.keys() and all(args[key] > 0 for key in geometry),
+            "INVALID_ARGUMENT", "Supply positive if_layout_width, if_layout_height and if_dpi together.")
     if name == "mss_ui_key":
+        require(("c" in args) != ("t" in args), "INVALID_ARGUMENT", "Supply exactly one of c or t.")
+        if "t" in args:
+            require(not (args.keys() & (MODIFIERS.keys() | {"k"})),
+                    "INVALID_ARGUMENT", "Text does not take a key kind or modifiers.")
+            require(args["t"] and all(category(char) not in {"Cc", "Cs", "Zl", "Zp"} for char in args["t"]),
+                    "INVALID_ARGUMENT", "Use nonempty text without control characters or invalid Unicode.")
+            return
         code = args["c"].lower()
         require(re.fullmatch(r"[a-z0-9]{1,24}", code) and args.get("k", "press") in {"down", "up", "press"},
                 "INVALID_ARGUMENT", "Use a Makepad key name and press, down, or up.")
@@ -665,13 +693,16 @@ class App:
                 self.read_peer = self.direct_peer(directory or self.directory)
             return self.call(name, args, peer=self.read_peer)
 
-    def action_target(self, tool_name, args):
+    def action_target(self, tool_name, args, *, allowed_press_paths=()):
         require(re.fullmatch(r"[0-9]+:[0-9]+", args["w"]) and bool(args["node"]),
                 "INVALID_ARGUMENT", "Use the exact node and window from this app's tree.")
         tree = native_json(self.peer.call("ui__ui", {"node": args["node"], "w": args["w"], "json": True}))
         nodes = [node for window in tree.get("trees", []) if window.get("window") == args["w"]
                  for node in window.get("nodes", []) if node.get("id") == args["node"]]
         require(len(nodes) == 1, "UNKNOWN_NODE", "This node is absent from the selected app window.")
+        if allowed_press_paths:
+            require(nodes[0].get("role") == "button" and nodes[0].get("path") in allowed_press_paths,
+                    "READ_ONLY_PROFILE", "This button is outside the profile's permitted semantic presses.")
         actions = set(nodes[0].get("actions", "").split(","))
         action = "replace_text" if tool_name == "mss_ui_type" else args["action"]
         require(action in SEMANTIC_ACTIONS and action in actions, "UNSUPPORTED",
@@ -712,9 +743,17 @@ class App:
         # At this Makepad revision keys use process-wide focus and drop events have no window ID.
         require(name == "mss_ui_mouse" or len(windows) == 1, "UNSUPPORTED",
                 "Key and drop require exactly one live window on the admitted Makepad app.")
+        window = matches[0]
+        if "if_dpi" in args:
+            expected = [args.pop("if_layout_width"), args.pop("if_layout_height"), args.pop("if_dpi")]
+            size, dpi = window.get("sz"), window.get("dpi")
+            require(isinstance(size, list) and len(size) == 2
+                    and all(type(value) in (int, float) for value in (*size, dpi))
+                    and [*size, dpi] == expected,
+                    "STALE_GEOMETRY", "The selected app window geometry changed before input dispatch.")
         if name == "mss_ui_key":
             return
-        width, height = matches[0]["sz"]
+        width, height = window["sz"]
         require(args["x"] < width and args["y"] < height and
                 args.get("x1", 0) < width and args.get("y1", 0) < height,
                 "INVALID_ARGUMENT", "Input points must be inside the selected window.")
@@ -751,6 +790,84 @@ class App:
         except (OSError, KeyError, TypeError, ValueError) as error:
             raise ToolFailure("CAPTURE_UNVERIFIED", "The owned PNG could not be verified.") from error
 
+    def resize_status(self, peer, window_id):
+        status = native_json(peer.call("ui__status", {}))
+        require(isinstance(status, dict) and type(status.get("pid")) is int
+                and status["pid"] == self.identity["app_pid"],
+                "IDENTITY_UNVERIFIED", "Makepad returned a different process identity.")
+        windows = status.get("w")
+        require(isinstance(windows, list), "RESIZE_STATUS_UNVERIFIED", "Window status is unavailable.")
+        matches = [window for window in windows if isinstance(window, dict)
+                   and type(window.get("i")) is int and window["i"] == window_id]
+        require(len(matches) == 1, "UNKNOWN_WINDOW", "Use a window ID from this app's current status.")
+        window = matches[0]
+        size, pixels, dpi = (window.get(key) for key in ("sz", "px", "dpi"))
+        require(isinstance(size, list) and len(size) == 2
+                and all(type(value) in (int, float) and 0 < value <= 2**31 for value in size)
+                and isinstance(pixels, list) and len(pixels) == 2
+                and all(type(value) is int and 0 < value <= 2**31 for value in pixels)
+                and type(dpi) in (int, float) and 0 < dpi <= 2**31,
+                "RESIZE_STATUS_UNVERIFIED", "Makepad window geometry is incomplete.")
+        return status, window
+
+    def resize(self, args, peer):
+        require(self.plan.access == "semantic", "READ_ONLY_PROFILE", "This profile permits inspection only.")
+        require({"ui__status", "ui__grab"} <= self.native_tools,
+                "UNSUPPORTED", "The admitted Makepad server lacks resize verification tools.")
+        try:
+            output = local_path(self.artifacts, directory=True) / f"{uuid4().hex}.png"
+        except (OSError, ValueError) as error:
+            raise ToolFailure("CAPTURE_UNVERIFIED", "The owned artifact directory is unavailable.") from error
+
+        requested = [args["width"], args["height"]]
+        window_id = args["w"]
+        dispatched = False
+        acknowledgement = None
+
+        def geometry_matches(window):
+            # Windows rounds to a physical pixel, and Remote reports points to three decimals.
+            tolerance = 0.5 / window["dpi"] + 0.001
+            return all(abs(actual - wanted) <= tolerance for actual, wanted in zip(window["sz"], requested))
+
+        try:
+            status, window = self.resize_status(peer, window_id)
+            if not geometry_matches(window):
+                dispatched = True
+                self.build_postcondition = None
+                acknowledgement = native_json(peer.call(
+                    "ui__resize", {"w": requested[0], "h": requested[1], "window": window_id}))
+                require(isinstance(acknowledgement, dict) and acknowledgement.get("resize") == requested,
+                        "RESIZE_ACK_UNVERIFIED", "Makepad did not acknowledge the requested layout size.")
+                status, window = self.resize_status(peer, window_id)
+                require(geometry_matches(window), "RESIZE_GEOMETRY_MISMATCH",
+                        "The observed layout size differs from the request.")
+            frame = peer.call("ui__grab", {"w": window_id, "scale": 1, "out": str(output)})
+            metadata = native_json(frame)
+            require(isinstance(metadata, dict) and type(metadata.get("w")) is int and metadata["w"] == window_id
+                    and metadata.get("sz") == window["px"],
+                    "CAPTURE_UNVERIFIED", "The pixel frame disagrees with the verified window geometry.")
+            digest = self.capture(frame, output)
+            self.ensure_ready()
+        except (ToolFailure, TransportFailure, OSError, TypeError, ValueError) as error:
+            if dispatched or isinstance(error, TransportFailure):
+                reason = error.code if isinstance(error, ToolFailure) else type(error).__name__
+                self.state = "OUTCOME_UNKNOWN" if dispatched else "TRANSPORT_LOST"
+                try:
+                    write_record(self.directory / "channel-state.json", self.record() | {"reason": reason})
+                except OSError:
+                    print("[mss] Unable to save the resize channel state.", file=sys.stderr)
+                raise ToolFailure(self.state, f"Resize verification failed ({reason}).") from error
+            if isinstance(error, ToolFailure):
+                raise
+            raise ToolFailure("CAPTURE_UNVERIFIED", "The owned pixel frame could not be verified.") from error
+
+        return result_json({
+            "code": "RESIZED" if dispatched else "UNCHANGED", "effect": "VERIFIED",
+            "app_id": self.app_id, "w": window_id, "layout_size": window["sz"], "dpi": window["dpi"],
+            "png": str(output), "sz": metadata["sz"], "sha256": digest, "capture_kind": "pixels",
+            "native_ack": acknowledgement, "status": status,
+        })
+
     def ensure_ready(self, *, allow_unknown=False):
         require(self.state in ({"READY", "OUTCOME_UNKNOWN"} if allow_unknown else {"READY"})
                 and self.peer.process.poll() is None,
@@ -766,15 +883,23 @@ class App:
         native, _, _, _, read = ROUTES[name]
         self.ensure_ready(allow_unknown=read)
         require(native in self.native_tools, "UNSUPPORTED", "The admitted Makepad server does not expose this tool.")
+        if name == "mss_resize":
+            return self.resize(args, peer or self.peer)
         raw_input = name in RAW_INPUT
+        preview = name == "mss_grab" and args.pop("preview", False)
         mutating_dispatch = False
         try:
             if not read:
-                require(self.plan.access == "semantic", "READ_ONLY_PROFILE", "This profile permits inspection only.")
+                allowed_press_paths = ()
+                if self.plan.access != "semantic":
+                    allowed_press_paths = getattr(self.plan, "allowed_press_paths", ())
+                    require(allowed_press_paths and name == "mss_ui_act" and args.get("action") == "press"
+                            and args.keys() <= (TARGET.keys() | {"action", "wait"}),
+                            "READ_ONLY_PROFILE", "This profile does not permit the requested mutation.")
                 if raw_input:
                     self.input_target(name, args)
                 else:
-                    self.action_target(name, args)
+                    self.action_target(name, args, allowed_press_paths=allowed_press_paths)
                     args.setdefault("json", True)
                 if "if_user_seq" in args:
                     refusal = self.preflight_user_seq(args, peer or self.peer)
@@ -789,7 +914,18 @@ class App:
                 if "count" in args or args.get("gone") is True or args.get("changed") is True:
                     self.build_postcondition = None
             if name == "mss_grab":
-                output = self.artifacts / f"{uuid4().hex}.png"
+                if preview:
+                    require(self.plan.access == "read-only" or (self.participant and self.plan.access == "semantic"),
+                            "PREVIEW_UNAVAILABLE", "Preview requires an owned read-only profile or an admitted attachment.")
+                    require(args.get("w", -1) >= 0, "INVALID_ARGUMENT", "Use the owned window ID.")
+                    directory = local_path(self.artifacts, directory=True)
+                    output = directory / "preview.png"
+                    for path in (output, output.with_suffix(".json")):
+                        if path.exists() or path.is_symlink():
+                            require(local_path(path).parent == directory and path.stat().st_nlink == 1,
+                                    "CAPTURE_UNVERIFIED", "Preview path must be an owned, unlinked file.")
+                else:
+                    output = self.artifacts / f"{uuid4().hex}.png"
                 args["out"] = str(output)
             mutating_dispatch = not read
             result = (peer or self.peer).call(native, args)
@@ -836,7 +972,14 @@ class App:
             if raw_input:
                 return result_json({"code": "DISPATCHED", "effect": "NOT_VERIFIED", "native_ack": acknowledgement})
         if name == "mss_grab" and not result.get("isError"):
+            if preview:
+                metadata = native_json(result)
+                require(metadata.get("w") == args["w"], "CAPTURE_UNVERIFIED",
+                        "Makepad returned a different window for the preview.")
             digest = self.capture(result, output)
+            if preview:
+                return result_json(metadata | {"app_id": self.app_id, "pid": self.identity["app_pid"],
+                                               "sha256": digest})
             if self.requested_build is not None:
                 self.build_png = (output, digest)
         if name == "mss_status" and not result.get("isError"):
@@ -949,8 +1092,8 @@ class App:
 
 class Router:
     def __init__(self, repo):
-        self.catalog = Catalog(repo, Path(sys.executable))
-        self.root = repo / "proof" / "mss-universal" / "connections" / uuid4().hex
+        self.catalog = Catalog(repo, Path(sys.executable), data_root=os.environ.get("MSS_DATA_ROOT"))
+        self.root = self.data_root / "proof" / "mss-universal" / "connections" / uuid4().hex
         self.apps = {}
         self.closed_apps = {}
         self.initialized = False
@@ -977,9 +1120,13 @@ class Router:
                 pass
         self.runtime_info = {
             "server_pid": os.getpid(), "server_started_utc": started, "connection_id": self.root.name,
-            "mss_version": "0.1.0", "mss_commit": commit, "commit_is_runtime_revision": False,
+            "mss_version": "0.1.0-preview.1", "mss_commit": commit, "commit_is_runtime_revision": False,
             "source_manifest": snapshot,
         }
+
+    @property
+    def data_root(self):
+        return getattr(self.catalog, "data_root", self.catalog.repo)
 
     def begin_shutdown(self):
         self.stopping = True
@@ -1005,7 +1152,10 @@ class Router:
                         if error.code != "UNKNOWN_APP":
                             raise
             return record
-        base = local_path(self.catalog.repo / "proof/mss-universal/connections", directory=True)
+        try:
+            base = local_path(self.data_root / "proof/mss-universal/connections", directory=True)
+        except FileNotFoundError as error:
+            raise ToolFailure("UNKNOWN_APP", "No recorded MSS launch; no process was targeted.") from error
         candidates = [p for p in base.glob("*/" + app_id) if p.is_dir()]
         require(len(candidates) == 1, "UNKNOWN_APP", "Expected one recorded MSS launch; no process was targeted.")
         directory = local_path(candidates[0], directory=True)
@@ -1046,7 +1196,10 @@ class Router:
                 "OWNERSHIP_UNVERIFIED", "Archived executable binding conflicts.")
         evidence = {name: hashlib.sha256(value).hexdigest() for name, value in files.items()}
         latest_path = directory / "cleanup-reconciliation.json"
-        legacy_known = False  # Legacy exit authority requires a separate review.
+        legacy_path = self.catalog.repo / "proof/mss-cleanup-remediation/source-before/MSS_MCP/tools/Start-MakepadMcp.ps1"
+        reviewed = (app_id, hashlib.sha256(files[str(receipt_path.relative_to(directory))]).hexdigest(),
+                    hashlib.sha256(files["profile.json"]).hexdigest()) in REVIEWED_LEGACY_EXIT
+        legacy_known = reviewed and legacy_path.is_file() and hashlib.sha256(local_path(legacy_path).read_bytes()).hexdigest() == LEGACY_LAUNCHER_SHA256
         detail = cleanup_classification(receipt, legacy_known=legacy_known)
         if not legacy_known and "exit_proof" not in receipt and receipt.get("cleanup") == "GRACEFUL":
             detail = {"state": "CLEANUP_PENDING", "reason": "LEGACY_LAUNCHER_PROVENANCE_NOT_VERIFIED"}
@@ -1100,9 +1253,7 @@ class Router:
     def store(self):
         with self.apps_lock:
             if self.shared is None:
-                base = local_path(self.catalog.repo / "MSS_MCP/profiles", directory=True) / "local.shared"
-                base.mkdir(exist_ok=True)
-                base = local_path(base, directory=True)
+                base = local_directory(self.data_root / "MSS_MCP/profiles/local.shared", create=True)
                 self.shared = Store(base / "control.sqlite3", self.root.name, process_identity(os.getpid()), is_live)
             return self.shared
 
@@ -1134,7 +1285,7 @@ class Router:
         store.attach(app_id)
         try:
             row = store.app(app_id)
-            base = local_path(self.catalog.repo / "proof/mss-universal/connections", directory=True)
+            base = local_path(self.data_root / "proof/mss-universal/connections", directory=True)
             directory = local_path(row["directory"], directory=True)
             require(directory.is_relative_to(base) and directory.name == app_id,
                     "IDENTITY_UNVERIFIED", "Shared app directory is not an MSS launch.")
@@ -1162,7 +1313,8 @@ class Router:
             app.plan = LaunchPlan([], Path(profile["working_directory"]), env, Path(profile["session_root"]),
                                   Path(profile["app_executable"]), receipt["app_sha256"], receipt["remote_sha256"],
                                   receipt["makepad_revision_declared"], receipt["profile_sha256"],
-                                  self.catalog.entries[row["profile"]]["access"], row.get("build_id"))
+                                  self.catalog.entries[row["profile"]]["access"], row.get("build_id"),
+                                  allowed_press_paths=self.catalog.press_paths(row["profile"], receipt["app_sha256"]))
             app.identity, app.os_identity = row["identity"], row["os_identity"]
             confirm_app(app.identity, app.os_identity)
             require(app.os_identity["windows_session"] == process_identity(os.getpid())["windows_session"],
@@ -1202,12 +1354,7 @@ class Router:
         return app
 
     def launch_directory(self, app_id):
-        path = local_path(self.catalog.repo / "proof", directory=True)
-        for component in ("mss-universal", "connections", self.root.name):
-            path = path / component
-            path.mkdir(exist_ok=True)
-            path = local_path(path, directory=True)
-        return path / app_id
+        return local_directory(self.root, create=True) / app_id
 
     def export_fragment(self, args):
         require(args["format"] == WRITER_FORMAT, "UNSUPPORTED_FORMAT", "Only writer-rich-text is supported.")
@@ -1281,19 +1428,20 @@ class Router:
             self.permission(app.app_id, control=name != "mss_close_app",
                             owner=name in {"mss_close_app", "mss_activate_build"})
             result = dispatch()
+            details = result.get("structuredContent", {})
             if result.get("isError"):
-                data = result.get("structuredContent", {})
-                state = "OUTCOME_UNKNOWN" if data.get("code") == "OUTCOME_UNKNOWN" else "FAILED"
+                state = "OUTCOME_UNKNOWN" if details.get("code") == "OUTCOME_UNKNOWN" else "FAILED"
             else:
                 state = "APPLIED"
-            op = store.finish(op["operation_id"], state,
-                              code=result.get("structuredContent", {}).get("code"))
+            effect = ("VERIFIED" if name == "mss_resize" and state == "APPLIED" and details.get("effect") == "VERIFIED"
+                      else "NOT_VERIFIED")
+            op = store.finish(op["operation_id"], state, code=details.get("code"), effect=effect)
             try:
-                data = native_json(result) if not result.get("isError") else result.get("structuredContent", {})
+                data = native_json(result) if not result.get("isError") else details
             except ToolFailure:
                 data = {"effect": "NOT_VERIFIED"}
             return result_json(data | {"operation_id": op["operation_id"], "operation_state": op["state"],
-                                       "operation_sequence": op["sequence"], "effect": "NOT_VERIFIED"},
+                                       "operation_sequence": op["sequence"], "effect": effect},
                                error=bool(result.get("isError")))
         except (ToolFailure, SharedError) as error:
             op = store.finish(op["operation_id"], "OUTCOME_UNKNOWN" if error.code == "OUTCOME_UNKNOWN" else "FAILED",
