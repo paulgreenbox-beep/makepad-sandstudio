@@ -22,6 +22,34 @@ function Resolve-LocalPath([string]$Value, [bool]$Directory) {
     }
     return $item.FullName
 }
+function New-OwnedRemoteDirectory([string]$SessionId) {
+    # Windows Makepad uses its process temp directory for Remote discovery. The
+    # Token-bound profile path stays independent of the synthetic USERPROFILE,
+    # LOCALAPPDATA and TEMP that isolate each admitted guest's other data.
+    $local = Resolve-LocalPath (Join-Path ([MssOwnedProcess]::UserProfileDirectory()) 'AppData\Local') $true
+    $parent = Join-Path $local 'MSS-Remote'
+    $path = Join-Path $parent $SessionId
+    # A conservative budget for this layout, not an upstream Windows path limit.
+    if ($path.Length -gt 200) { throw 'BLOCKED: MSS Remote temp path exceeds its short-path budget.' }
+    [void][IO.Directory]::CreateDirectory($parent)
+    $parent = Resolve-LocalPath $parent $true
+    $path = Join-Path $parent $SessionId
+    [MssOwnedProcess]::CreateNewDirectory($path)
+    return $path
+}
+function Clear-OwnedRemoteDirectory([string]$Path) {
+    # This is the create-only directory for one launch. Walk literal children
+    # and refuse reparse points; never recurse into a different app's directory.
+    $directory = Resolve-LocalPath $Path $true
+    foreach ($child in Get-ChildItem -LiteralPath $directory -Force) {
+        if ($child.PSIsContainer) {
+            Clear-OwnedRemoteDirectory $child.FullName
+        } else {
+            [IO.File]::Delete((Resolve-LocalPath $child.FullName $false))
+        }
+    }
+    [IO.Directory]::Delete((Resolve-LocalPath $directory $true))
+}
 function Open-PinnedExecutable([string]$Path, [string]$ExpectedHash) {
     if ($ExpectedHash -notmatch '^[a-fA-F0-9]{64}$') { throw 'Missing executable SHA-256.' }
     if ([IO.Path]::GetExtension($Path) -ine '.exe') { throw 'Only native Windows executables are admitted.' }
@@ -39,8 +67,8 @@ function New-ChildInfo([string]$Executable, [string[]]$Arguments, [bool]$Capture
     $info.CreateNoWindow = $true
     $info.WorkingDirectory = $script:workingDirectory
     foreach ($argument in $Arguments) { $info.ArgumentList.Add($argument) }
-    $info.Environment['TEMP'] = $script:sessionDirectory
-    $info.Environment['TMP'] = $script:sessionDirectory
+    $info.Environment['TEMP'] = $script:remoteDirectory
+    $info.Environment['TMP'] = $script:remoteDirectory
     $info.Environment['MAKEPAD_HIDE_WINDOWS'] = '1'
     [void]$info.Environment.Remove('MAKEPAD_FOCUS')
     [void]$info.Environment.Remove('MAKEPAD_HAL_BACKEND')
@@ -92,6 +120,24 @@ public static class MssOwnedProcess {
     [DllImport("kernel32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
     private static extern bool QueryFullProcessImageNameW(SafeProcessHandle process, uint flags,
         StringBuilder image, ref uint length);
+    [DllImport("userenv.dll", CharSet=CharSet.Unicode, SetLastError=true)]
+    private static extern bool GetUserProfileDirectoryW(SafeAccessTokenHandle token, StringBuilder directory,
+        ref uint length);
+    public static string UserProfileDirectory() {
+        using (var identity = System.Security.Principal.WindowsIdentity.GetCurrent()) {
+            uint size = 32768;
+            var path = new StringBuilder((int)size);
+            if (!GetUserProfileDirectoryW(identity.AccessToken, path, ref size))
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "Windows user profile directory unavailable.");
+            return path.ToString();
+        }
+    }
+    [DllImport("kernel32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
+    private static extern bool CreateDirectoryW(string path, IntPtr securityAttributes);
+    public static void CreateNewDirectory(string path) {
+        if (!CreateDirectoryW(path, IntPtr.Zero))
+            throw new Win32Exception(Marshal.GetLastWin32Error(), "Owned Remote temp directory could not be created.");
+    }
     public static MssOwnedSnapshot Read(SafeProcessHandle process) {
         uint pid = GetProcessId(process);
         long born, exited, kernel, user;
@@ -178,6 +224,9 @@ $appHandle = $null
 $launcherProcess = $null
 $birthFileTime = $null
 $server = $null
+$remoteDirectory = $null
+$appStartAttempted = $false
+$appExitConfirmed = $false
 $logs = @()
 $pumps = @()
 $exitCode = 1
@@ -239,6 +288,7 @@ try {
             app_sha256=$configuration.app_sha256;remote_sha256=$configuration.remote_sha256
             started_utc=[DateTime]::UtcNow.ToString('o');status='STARTING'
             cleanup='NOT_RUN';mcp_exit_code=$null;app_exit_code=$null
+            remote_directory=$null;remote_cleanup='NOT_RUN'
             app_pid=$null;app_birth_utc=$null;app_birth_filetime=$null
             app_image_expected=$appExecutable;app_image=$null;app_image_verified=$false
             launch_intent_utc=[DateTime]::UtcNow.ToString('o');process_started=$false
@@ -251,10 +301,14 @@ try {
                 'supervisor crash cleanup NOT_VERIFIED','descendant containment NOT_VERIFIED',
                 'filesystem/network confinement and log disk quotas NOT_IMPLEMENTED')
         }
+        $remoteDirectory = New-OwnedRemoteDirectory $sessionId
+        $receipt.remote_directory = $remoteDirectory
+        $receipt.remote_cleanup = 'IN_USE'
         # Persist launch intent before Process.Start. A PID alone never grants cleanup authority.
         Write-Receipt
         $appInfo = New-ChildInfo $appExecutable $appArguments $true
         $appInfo.RedirectStandardInput = $true
+        $appStartAttempted = $true
         $app = [Diagnostics.Process]::Start($appInfo)
         $appHandle = $app.SafeHandle
         $created = [MssOwnedProcess]::Read($appHandle)
@@ -276,16 +330,19 @@ try {
             throw 'Owned app exited or image identity was unavailable within 2000 ms; no Remote request was sent.'
         }
         Write-Receipt
-        $discoveryPath = Join-Path $sessionDirectory ('makepad-remote-' + $app.Id + '.json')
+        $discoveryPath = Join-Path $remoteDirectory ('makepad-remote-' + $app.Id + '.json')
         $deadline = [DateTime]::UtcNow.AddSeconds(30)
         $ready = $false
         while ([DateTime]::UtcNow -lt $deadline) {
             if (-not (Confirm-OwnedApp)) { throw 'Owned app exited before readiness.' }
             if (Test-Path -LiteralPath $discoveryPath) {
-                $discovery = Get-Content -LiteralPath $discoveryPath -Raw | ConvertFrom-Json -AsHashtable
+                $discoveryFile = Resolve-LocalPath $discoveryPath $false
+                try {
+                    $discovery = [IO.File]::ReadAllText($discoveryFile) | ConvertFrom-Json -AsHashtable
+                } catch { throw 'Owned Remote discovery could not be read.' }
                 if ($discovery.pid -ne $app.Id -or $discovery.app -ine [IO.Path]::GetFileName($appExecutable) -or
                     $discovery.socket -notmatch '^tcp:127\.0\.0\.1:[0-9]+$' -or
-                    [string]::IsNullOrEmpty($discovery.token)) { throw 'Discovery did not match the owned app.' }
+                    $discovery.token -cnotmatch '^[0-9a-f]{64}$') { throw 'Discovery did not match the owned app.' }
                 $answer = Invoke-OwnedRemote @('status')
                 if ($answer.ExitCode -eq 0) {
                     foreach ($line in ($answer.Output -split "\r?\n")) {
@@ -377,7 +434,6 @@ public static class MssMcpStdout {
         }
     }
     if ($app) {
-        $appExitConfirmed = $false
         try {
             if (Confirm-OwnedApp) {
                 try { [void](Invoke-OwnedRemote @('gq')) } catch { [Console]::Error.WriteLine('[MSS] gq response unavailable; checking owned process exit.') }
@@ -409,25 +465,32 @@ public static class MssMcpStdout {
         foreach ($log in $logs) {
             try { $log.Dispose() } catch { $receipt.log_capture = 'INCOMPLETE'; $exitCode = 1 }
         }
-        $receipt.launcher_exit_code = $exitCode
-        if ($appExitConfirmed -and $serverExitConfirmed) {
+    }
+    if ($remoteDirectory) {
+        $receipt.remote_cleanup = 'CLEANUP_PENDING'
+        if ($serverExitConfirmed -and ($appExitConfirmed -or -not $appStartAttempted)) {
+            try {
+                Clear-OwnedRemoteDirectory $remoteDirectory
+                $receipt.remote_cleanup = 'REMOVED'
+            } catch {
+                [Console]::Error.WriteLine('[MSS] Owned Remote temp cleanup failed; see the session receipt.')
+                $exitCode = 1
+            }
+        }
+    }
+    if (Get-Variable receipt -ErrorAction SilentlyContinue) {
+        # If Process.Start failed without a retained handle, exit remains unconfirmed.
+        if ($appExitConfirmed -and $serverExitConfirmed -and $receipt.remote_cleanup -eq 'REMOVED') {
             $receipt.status = if ($receipt.startup_qualified -and $exitCode -eq 0) { 'CLOSED' } else { 'FAILED_CLOSED' }
         } else {
             $receipt.status = 'CLEANUP_PENDING'
             $receipt.cleanup = 'CLEANUP_PENDING'
             $exitCode = 1
-            $receipt.launcher_exit_code = 1
         }
+        $receipt.launcher_exit_code = $exitCode
         $receipt.completed_utc = [DateTime]::UtcNow.ToString('o')
         try { Write-Receipt }
         catch { [Console]::Error.WriteLine('[MSS] Final receipt could not be written.'); $exitCode = 1 }
-    } elseif (Get-Variable receipt -ErrorAction SilentlyContinue) {
-        # A failed Process.Start did not provide a retained handle proving what happened.
-        $receipt.status = 'CLEANUP_PENDING'
-        $receipt.cleanup = 'CLEANUP_PENDING'
-        $receipt.launcher_exit_code = 1
-        $receipt.completed_utc = [DateTime]::UtcNow.ToString('o')
-        try { Write-Receipt } catch { [Console]::Error.WriteLine('[MSS] Incomplete-launch receipt could not be written.') }
     }
     foreach ($resource in @($server,$app,$remotePin,$appPin,$stdoutSink,$launcherProcess)) {
         if ($null -ne $resource) { try { $resource.Dispose() } catch { $exitCode = 1 } }

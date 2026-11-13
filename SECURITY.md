@@ -10,7 +10,7 @@ MSS `0.1.0-preview.1` is a trusted-local Windows developer preview. The implemen
 
 ## Addressed commands and lifecycle
 
-Native Windows guests use their own Makepad Remote loopback endpoint and a per-session discovery token. MSS uses the official Remote client over local stdio. Keep discovery files and tokens private. The guest token and an app-level permission check do not restrict other programs running with the same OS identity. Do not expose local endpoints to a network or bypass the router's policy. Independent processes and Makepad addressed input do not restrict guest filesystem, network or credential access.
+Native Windows guests use their own Makepad Remote loopback endpoint and a per-session discovery token. MSS uses the official Remote client over local stdio. Each launch owns a separate discovery directory under the Windows account profile. Receipt validation binds attached clients to that directory. Keep discovery files and tokens private. The guest token and an app-level permission check do not restrict other programs running with the same OS identity. Do not expose local endpoints to a network or bypass the router's policy. Independent processes and Makepad addressed input do not restrict guest filesystem, network or credential access.
 
 MSS targets app/window-local input. Do not use foreground desktop focus, global keyboard/mouse injection or an unverified fallback. Human View input is bound to the selected drawn geometry. An ACK confirms dispatch only. Record independent state and health evidence to claim an effect. After transport loss or `OUTCOME_UNKNOWN`, preserve the receipt and never automatically replay a mutation. [Verification contracts](doc/testing.md)
 

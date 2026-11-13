@@ -312,6 +312,8 @@ def cleanup_classification(receipt, *, launcher_code=None, launcher_pid=None, le
         proof_kind = "legacy_GRACEFUL_retained_handle_branch"
     else:
         return pending("NO_BOUND_EXIT_PROOF")
+    if "remote_directory" in receipt and receipt.get("remote_cleanup") != "REMOVED":
+        return pending("OWNED_REMOTE_TEMP_CLEANUP_UNCONFIRMED")
     if receipt.get("status") not in {"CLOSED", "FAILED_CLOSED", "FAIL", "FAIL_APP_EXIT", "FAIL_MCP_EXIT"}:
         return pending("RECEIPT_NOT_FINAL")
     if not (type(receipt.get("launcher_exit_code")) is int and receipt.get("completed_utc")):
@@ -625,8 +627,9 @@ class App:
                 require(candidates[0].parent.name == receipt["profile_id"] + "-" + receipt["session_id"],
                         "IDENTITY_UNVERIFIED", "Receipt session directory changed.")
             if self.identity:
-                require(all(receipt[key] == value for key, value in self.identity.items()),
-                        "IDENTITY_UNVERIFIED", "Owned process identity changed.")
+                require(all(receipt[key] == value for key, value in self.identity.items())
+                        and ("remote_directory" in receipt) == ("remote_directory" in self.identity),
+                        "IDENTITY_UNVERIFIED", "Owned process or Remote directory identity changed.")
             return receipt
         except (OSError, KeyError, TypeError, ValueError) as error:
             raise ToolFailure("IDENTITY_UNVERIFIED", "Owned launcher receipt is unavailable.") from error
@@ -653,9 +656,28 @@ class App:
                 and status.get("app", "").lower() == self.plan.app_image.name.lower() and status.get("w"),
                 "IDENTITY_UNVERIFIED", "Makepad status did not identify the owned window.")
         self.identity = {key: receipt[key] for key in ("app_pid", "app_birth_utc", "app_image", "session_id")}
+        if "remote_directory" in receipt:
+            self.discovery_directory(receipt)
+            self.identity["remote_directory"] = receipt["remote_directory"]
         self.os_identity = confirm_app(self.identity, None)
         self.state = "READY"
         write_record(self.directory / "ownership.json", self.record() | self.identity)
+
+    def discovery_directory(self, receipt):
+        """Use the immutable owned temp directory, or the documented legacy layout."""
+        try:
+            if "remote_directory" not in receipt:
+                return local_path(self.receipt_path.parent, directory=True)
+            value = receipt["remote_directory"]
+            directory = local_path(value, directory=True)
+            require(isinstance(value, str) and str(directory) == value
+                    and directory.parent.name == "MSS-Remote"
+                    and re.fullmatch(r"[a-f0-9]{32}", directory.name)
+                    and directory.name == receipt["session_id"],
+                    "IDENTITY_UNVERIFIED", "Launcher Remote temp directory does not match this session.")
+            return directory
+        except (OSError, KeyError, TypeError, ValueError) as error:
+            raise ToolFailure("IDENTITY_UNVERIFIED", "Owned Remote temp directory is unavailable.") from error
 
     def direct_peer(self, directory):
         """A second official MCP client, bound to the owner's exact discovery directory."""
@@ -665,12 +687,19 @@ class App:
         profile = json.loads(profile_path.read_bytes())
         remote = local_path(profile["remote_executable"])
         check_pin(remote, self.plan.remote_sha256)
-        env = dict(self.plan.env)
-        env.update(TEMP=str(self.receipt_path.parent), TMP=str(self.receipt_path.parent))
-        discovery = json.loads((self.receipt_path.parent / f'makepad-remote-{receipt["app_pid"]}.json').read_bytes())
-        require(discovery.get("pid") == receipt["app_pid"]
-                and re.fullmatch(r"tcp:127\.0\.0\.1:[0-9]+", discovery.get("socket", ""))
-                and bool(discovery.get("token")), "IDENTITY_UNVERIFIED", "Owned Remote discovery changed.")
+        temp = self.discovery_directory(receipt)
+        env = dict(self.plan.env, TEMP=str(temp), TMP=str(temp))
+        try:
+            discovery_file = local_path(temp / f'makepad-remote-{receipt["app_pid"]}.json')
+            discovery = json.loads(discovery_file.read_bytes())
+            require(isinstance(discovery, dict) and discovery.get("pid") == receipt["app_pid"]
+                    and str(discovery.get("app", "")).lower() == self.plan.app_image.name.lower()
+                    and re.fullmatch(r"tcp:127\.0\.0\.1:[0-9]+", discovery.get("socket", ""))
+                    and re.fullmatch(r"[0-9a-f]{64}", discovery.get("token", "")),
+                    "IDENTITY_UNVERIFIED", "Owned Remote discovery changed.")
+        except (OSError, TypeError, ValueError):
+            # Parse failures must not expose the token in error reporting.
+            raise ToolFailure("IDENTITY_UNVERIFIED", "Owned Remote discovery is unavailable.") from None
         plan = replace(self.plan, command=[str(remote), "mcp", str(receipt["app_pid"])], env=env)
         peer = Peer(plan, directory / f"remote-client-{uuid4().hex}.log")
         try:
@@ -678,8 +707,9 @@ class App:
                                        "clientInfo": {"name": "mss", "version": "1"}})
             peer.send({"jsonrpc": "2.0", "method": "notifications/initialized"})
             status = native_json(peer.call("ui__status", {}))
-            require(status.get("pid") == self.identity["app_pid"],
-                    "IDENTITY_UNVERIFIED", "Attached Remote process changed.")
+            require(status.get("pid") == self.identity["app_pid"]
+                    and str(status.get("app", "")).lower() == self.plan.app_image.name.lower() and status.get("w"),
+                    "IDENTITY_UNVERIFIED", "Attached Remote process or window changed.")
             return peer
         except Exception:
             peer.close()
@@ -1308,8 +1338,7 @@ class Router:
             app.artifacts.mkdir()
             env = {key: os.environ[key] for key in SYSTEM_KEYS if key in os.environ}
             windows = Path(env["SystemRoot"])
-            env.update(PATH=os.pathsep.join(map(str, (windows / "System32", windows))),
-                       TEMP=str(receipt_path.parent), TMP=str(receipt_path.parent))
+            env["PATH"] = os.pathsep.join(map(str, (windows / "System32", windows)))
             app.plan = LaunchPlan([], Path(profile["working_directory"]), env, Path(profile["session_root"]),
                                   Path(profile["app_executable"]), receipt["app_sha256"], receipt["remote_sha256"],
                                   receipt["makepad_revision_declared"], receipt["profile_sha256"],

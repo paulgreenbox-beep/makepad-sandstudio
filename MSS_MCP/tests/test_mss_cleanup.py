@@ -79,6 +79,12 @@ class CleanupClassificationTests(unittest.TestCase):
     def test_ordinary_qualified_graceful_lifecycle_is_closed(self):
         self.assertEqual(self.classify(receipt_fixture(healthy=True))["state"], "CLOSED")
 
+    def test_process_exit_alone_does_not_confirm_new_remote_temp_cleanup(self):
+        receipt = receipt_fixture(healthy=True) | {"remote_directory": "fixture", "remote_cleanup": "CLEANUP_PENDING"}
+        self.assertEqual(self.classify(receipt)["reason"], "OWNED_REMOTE_TEMP_CLEANUP_UNCONFIRMED")
+        receipt["remote_cleanup"] = "REMOVED"
+        self.assertEqual(self.classify(receipt)["state"], "CLOSED")
+
     def test_successful_close_needs_observed_image_verification(self):
         for field in ("receipt", "proof"):
             receipt = receipt_fixture(healthy=True)
