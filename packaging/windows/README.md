@@ -1,20 +1,36 @@
 # Windows MSI candidate
 
-The preview branch distributes source. The local RC2 is an unsigned Windows x64 MSI candidate. WiX 3.14.1 builds a per-user installation, Start menu shortcut and standard Windows Installer uninstall. Build tools are only needed to create the MSI. Guest runtimes and app profiles are configured separately.
+WiX 3.14.1 creates a per-user Windows x64 installation with a Start menu shortcut and standard Windows Installer uninstall. The preview branch distributes source. Keep local unsigned candidates out of public release assets until the package is qualified and all redistribution terms are satisfied.
 
 ## Build the package
 
-Build the locked Windows release executable using [BUILDING.md](../../BUILDING.md). Stage `mss-desktop.exe` at the payload root. Stage the five MSS Python modules and `Start-MakepadMcp.ps1` in `MSS_MCP/tools`, alongside the payload's `LICENSE`, `THIRD_PARTY_NOTICES.md` and `CONFIGURATION.md` at the root. Check all file pins before building.
+Build from the pinned source and Cargo.lock as described in [BUILDING.md](../../BUILDING.md). Set the Makepad package root at compile time and use a separate Cargo target directory for the MSI build. Symbol stripping removes development debug data. Use rustc path remapping for source/build paths when building a release and audit the resulting PE separately because remapping does not cover all embedded strings.
 
 ```powershell
+$env:MAKEPAD_PACKAGE_DIR = 'resources'
+$env:CARGO_PROFILE_RELEASE_STRIP = 'symbols'
+cargo build -p mss-desktop --release --locked --target-dir $packageTarget
+```
+
+Use a fresh staging directory. Stage the packaged `mss-desktop.exe`, `LICENSE`, `THIRD_PARTY_NOTICES.md`, and `CONFIGURATION.md` at the payload root. Stage the five MSS Python modules and `Start-MakepadMcp.ps1` under `MSS_MCP/tools`, and stage the five reviewed license and inventory files from `packaging/windows/licenses` under `licenses`.
+
+The pinned Makepad loader resolves the packaged paths relative to the executable when launched from an unrelated working directory. The staging script checks the PE's exact International font manifest and the SHA-256 of each required font, then copies nine files under `resources/makepad_widgets/resources` beside the executable. The pinned theme SVGs are embedded by Makepad.
+
+```powershell
+& $python -I -B packaging/windows/stage_makepad_resources.py `
+    --exe "$payload/mss-desktop.exe" --makepad-checkout $makepadCheckout --payload $payload
 & $candle -nologo -arch x64 "-dPayloadDir=$payload" -out $object packaging/windows/MSS.wxs
 & $light -nologo -out $msi $object
 ```
 
-Set `$candle` and `$light` to the approved WiX executables and supply a staging directory and output paths. MSI ProductVersion uses `0.1.1`. The display label and source version are `0.1.0-preview.1`. The packaged program files are separate from the data root. Uninstall removes the installer-owned program and shortcut. The same-host test confirmed that its external data and profile files survived.
+Set the tool variables to approved executables. Use the checkout at `130be1d0318adcf69453d925342607466353152c` for `$makepadCheckout`, and set `$object` and `$msi` to local output paths. Keep the staging receipt with the package verification evidence. MSI ProductVersion is `0.1.1`, while the display and source version is `0.1.0-preview.1`.
 
 ## Run an installed preview
 
-Provision approved Python 3.12+ and PowerShell 7.4+, then configure the guest and its compatible official Makepad Remote as described in [CONFIGURATION.md](../../CONFIGURATION.md). The RC2 payload has no bundled Python, PowerShell, Codex, guest, Remote or standalone font files. The published `MSS.wxs` at the audited release base does not check runtime versions at installation.
+Provision CPython 3.12+ and PowerShell 7.4+. The MSI checks the runtime versions and reports a missing prerequisite before installation. It checks registered supported CPython versions and the standard PowerShell 7 directory, and accepts explicit runtime directories for standalone installs.
 
-A separate local MSI candidate adds file-version gates for both prerequisites. It rejected a missing Python and a missing PowerShell before copying product files. With explicitly selected standalone Python 3.14.10 and PowerShell 7.6.10, installation, one installed RudraOffice attach/render/detach scenario and uninstall passed on the development Windows host. Those gates and results belong to that candidate. Clean-host loading of Makepad resources remains `NOT_RUN`. Qualify the exact resources and notices before any binary release. [Known limitations](../../KNOWN_LIMITATIONS.md)
+```powershell
+msiexec.exe /i "$msi" "PYTHONRUNTIMEDIR=$pythonDirectory" "PWSHRUNTIMEDIR=$powerShellDirectory"
+```
+
+The properties name directories containing `python.exe` and `pwsh.exe`. At runtime point `MSS_DESKTOP_PYTHON` and `MSS_PWSH_EXE` to the approved executables when needed. Configure the operator-supplied guest and its compatible official Makepad Remote as described in [CONFIGURATION.md](../../CONFIGURATION.md). Installed program files and the external data root have separate lifecycles. MSI uninstall removes installer-owned files and the shortcut. See [known limitations](../../KNOWN_LIMITATIONS.md) for the qualification and release scope.

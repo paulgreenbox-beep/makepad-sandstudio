@@ -9,6 +9,45 @@
                       Name="InstallFolder" Type="raw" Win64="yes" />
     </Property>
     <MajorUpgrade DowngradeErrorMessage="A newer Makepad SandStudio is already installed." />
+    <Property Id="PYTHONRUNTIMEDIR" Secure="yes" />
+    <Property Id="PWSHRUNTIMEDIR" Secure="yes" />
+    <Property Id="MSS_PYTHON_CUSTOM" Secure="yes">
+      <DirectorySearch Id="PythonCustomLocation" Path="[PYTHONRUNTIMEDIR]" Depth="0">
+        <FileSearch Name="python.exe" MinVersion="3.12.0.0" />
+      </DirectorySearch>
+    </Property>
+    <?foreach Version in 3.12;3.13;3.14;3.15 ?>
+      <Property Id="PYU$(var.Version)" Secure="yes">
+        <RegistrySearch Id="PythonUserLocation$(var.Version)" Root="HKCU"
+                        Key="Software\Python\PythonCore\$(var.Version)\InstallPath" Type="directory" Win64="yes">
+          <DirectorySearch Id="PythonUserFile$(var.Version)" Depth="0">
+            <FileSearch Name="python.exe" MinVersion="3.12.0.0" />
+          </DirectorySearch>
+        </RegistrySearch>
+      </Property>
+      <Property Id="PYM$(var.Version)" Secure="yes">
+        <RegistrySearch Id="PythonMachineLocation$(var.Version)" Root="HKLM"
+                        Key="Software\Python\PythonCore\$(var.Version)\InstallPath" Type="directory" Win64="yes">
+          <DirectorySearch Id="PythonMachineFile$(var.Version)" Depth="0">
+            <FileSearch Name="python.exe" MinVersion="3.12.0.0" />
+          </DirectorySearch>
+        </RegistrySearch>
+      </Property>
+    <?endforeach ?>
+    <Property Id="MSS_PWSH_CUSTOM" Secure="yes">
+      <DirectorySearch Id="PwshCustomLocation" Path="[PWSHRUNTIMEDIR]" Depth="0">
+        <FileSearch Name="pwsh.exe" MinVersion="7.4.0.0" />
+      </DirectorySearch>
+    </Property>
+    <Property Id="MSS_PWSH_DEFAULT" Secure="yes">
+      <DirectorySearch Id="PwshDefaultLocation" Path="[ProgramFiles64Folder]PowerShell\7" Depth="0">
+        <FileSearch Name="pwsh.exe" MinVersion="7.4.0.0" />
+      </DirectorySearch>
+    </Property>
+    <Condition Message="Install CPython 3.12 or later, or use PYTHONRUNTIMEDIR with the directory containing its python.exe.">Installed OR (PYTHONRUNTIMEDIR AND MSS_PYTHON_CUSTOM) OR (NOT PYTHONRUNTIMEDIR AND (PYU3.12 OR PYM3.12 OR PYU3.13 OR PYM3.13 OR PYU3.14 OR PYM3.14 OR PYU3.15 OR PYM3.15))</Condition>
+    <Condition Message="Install PowerShell 7.4 or later, or use PWSHRUNTIMEDIR with the directory containing its pwsh.exe.">
+      Installed OR (PWSHRUNTIMEDIR AND MSS_PWSH_CUSTOM) OR (NOT PWSHRUNTIMEDIR AND MSS_PWSH_DEFAULT)
+    </Condition>
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="LocalAppDataFolder">
         <Directory Id="ProgramsFolder" Name="Programs">
@@ -25,6 +64,38 @@
               <File Id="Configuration" Source="$(var.PayloadDir)\CONFIGURATION.md" />
               <RegistryValue Root="HKCU" Key="Software\MakepadSandStudio\Preview" Name="Documentation" Type="integer" Value="1" KeyPath="yes" />
             </Component>
+            <Directory Id="MakepadResourcesDirectory" Name="resources">
+              <Directory Id="MakepadWidgetsDirectory" Name="makepad_widgets">
+                <Directory Id="MakepadWidgetAssetsDirectory" Name="resources">
+                  <Component Id="MakepadWidgetAssets" Guid="2216B52B-98E7-4C53-BC41-6CA087DF590B" Win64="yes">
+                    <File Id="IbmPlexSansText" Source="$(var.PayloadDir)\resources\makepad_widgets\resources\IBMPlexSans-Text.ttf" />
+                    <File Id="IbmPlexSansSemiBold" Source="$(var.PayloadDir)\resources\makepad_widgets\resources\IBMPlexSans-SemiBold.ttf" />
+                    <File Id="IbmPlexSansItalic" Source="$(var.PayloadDir)\resources\makepad_widgets\resources\IBMPlexSans-Italic.ttf" />
+                    <File Id="IbmPlexSansBoldItalic" Source="$(var.PayloadDir)\resources\makepad_widgets\resources\IBMPlexSans-BoldItalic.ttf" />
+                    <File Id="LiberationMonoRegular" Source="$(var.PayloadDir)\resources\makepad_widgets\resources\LiberationMono-Regular.ttf" />
+                    <File Id="FontAwesomeSolid" Source="$(var.PayloadDir)\resources\makepad_widgets\resources\fa-solid-900.ttf" />
+                    <File Id="LxgwWenKaiRegular" Source="$(var.PayloadDir)\resources\makepad_widgets\resources\LXGWWenKaiRegular.ttf" />
+                    <File Id="LxgwWenKaiBold" Source="$(var.PayloadDir)\resources\makepad_widgets\resources\LXGWWenKaiBold.ttf" />
+                    <File Id="NotoColorEmoji" Source="$(var.PayloadDir)\resources\makepad_widgets\resources\NotoColorEmoji.ttf" />
+                    <RegistryValue Root="HKCU" Key="Software\MakepadSandStudio\Preview" Name="MakepadWidgetAssets" Type="integer" Value="1" KeyPath="yes" />
+                    <RemoveFolder Id="RemoveMakepadWidgetAssets" On="uninstall" />
+                    <RemoveFolder Id="RemoveMakepadWidgets" Directory="MakepadWidgetsDirectory" On="uninstall" />
+                    <RemoveFolder Id="RemoveMakepadResources" Directory="MakepadResourcesDirectory" On="uninstall" />
+                  </Component>
+                </Directory>
+              </Directory>
+            </Directory>
+            <Directory Id="LicensesDirectory" Name="licenses">
+              <Component Id="DependencyLicenses" Guid="0E9B0AF3-1434-4C5C-BD61-4B5BBCBD65EE" Win64="yes">
+                <File Id="DependencyLicenseTexts" Source="$(var.PayloadDir)\licenses\DEPENDENCY-LICENSES.txt" />
+                <File Id="RustCopyright" Source="$(var.PayloadDir)\licenses\RUST-COPYRIGHT.html" />
+                <File Id="InstalledNotices" Source="$(var.PayloadDir)\licenses\THIRD_PARTY_NOTICES.md" />
+                <File Id="ComponentInventory" Source="$(var.PayloadDir)\licenses\COMPONENTS.json" />
+                <File Id="MakepadResourceNotices" Source="$(var.PayloadDir)\licenses\MAKEPAD-RESOURCES.md" />
+                <RegistryValue Root="HKCU" Key="Software\MakepadSandStudio\Preview" Name="DependencyLicenses" Type="integer" Value="1" KeyPath="yes" />
+                <RemoveFolder Id="RemoveLicensesFolder" On="uninstall" />
+              </Component>
+            </Directory>
             <Directory Id="MssMcpDirectory" Name="MSS_MCP">
               <Directory Id="MssToolsDirectory" Name="tools">
                 <Component Id="MssTools" Guid="915F8B88-670D-4F0E-AE21-AB6A11A1936D" Win64="yes">
@@ -57,6 +128,8 @@
       <ComponentRef Id="Desktop" />
       <ComponentRef Id="Documentation" />
       <ComponentRef Id="MssTools" />
+      <ComponentRef Id="MakepadWidgetAssets" />
+      <ComponentRef Id="DependencyLicenses" />
       <ComponentRef Id="Shortcut" />
     </Feature>
   </Product>
