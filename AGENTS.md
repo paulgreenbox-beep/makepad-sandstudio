@@ -1,44 +1,32 @@
 # Developer and agent rules
 
-MSS is in **Initial Architecture / Development**. Read this file, SECURITY.md, doc/architecture.md, doc/compatibility.md, doc/testing.md, and doc/dungeon.md before changing a public contract or structural declaration. The native Desktop shell is illustrative; do not describe it as a live viewer.
+Makepad SandStudio 0.1.0-preview.1 runs separate hidden Makepad applications on native Windows. [Architecture](doc/architecture.md), [Security](SECURITY.md), [Compatibility](doc/compatibility.md), [Testing](doc/testing.md) and [Structure](doc/dungeon.md) define the current boundaries. Read the relevant sections before changing a contract. [MSS_MCP](MSS_MCP/README.md) is the tool reference.
 
-## Evidence and result handling
+## AI Direct
 
-- Never weaken an assertion, postcondition, health check, failure classification, identity check, or cleanup requirement to obtain a green result.
-- Never delete, skip, shorten, rename, or replace existing Rust Makepad Toolkit tests or .aiui.json scenarios to make MSS pass.
-- Do not treat a command acknowledgement, successful HTTP response, captured frame, compilation, or static source inspection as proof of a completed user-visible action.
-- Verify mutations with the declared postcondition, runtime health, and session-bound evidence. Preserve an uncertain outcome as OUTCOME_UNKNOWN; do not automatically replay a mutation.
-- Use PASS, FAIL, BLOCKED, NOT_RUN, and NOT_VERIFIED for acceptance states as defined in doc/testing.md. Operational outcomes such as OUTCOME_UNKNOWN and UNSUPPORTED may be reported separately; never normalize them into PASS.
-- Keep source review, compilation, unit checks, live application behavior, GUI acceptance, and release acceptance as separate evidence levels.
+- Use the local `mss` connection to inspect the guest itself. Start with `mss_list_apps` for admitted profiles, `mss_find_app` for instances known to your connection, or `mss_list_instances` to see local instance metadata and sharing modes. Use `mss_launch_app` for a new instance when the task authorizes a launch.
+- Select the returned App ID and obtain the current window and semantic nodes through `mss_status`, `mss_ui_tree` or `mss_ui_find`. Use the matching window and schema for that call. App IDs, window IDs and node IDs belong to their own instance and runtime state. Use `mss_grab` on the selected app/window for an app-native PNG.
+- Obtain the effective permission through the existing sharing flow. The owner selects `private`, `read` or `control`. Attach explicitly with `mss_attach_app`. Read permission supports observation and capture. Control permits admitted operations under the profile's policy. Only the owner closes or changes sharing. Detach with `mss_detach_app` when an attachment is no longer needed.
+- Address semantic actions to the app and verify the result using an independent read, a bounded `mss_ui_wait`, or a postcondition appropriate to the feature. Check runtime health and keep attributable evidence. Use the current tool schema and app capabilities. Treat system clipboard shortcuts and app-specific actions according to the router policy.
+- Keep Desktop tab selection out of AI Direct. Inspect the Desktop process only when the authorized test is about Desktop or Human View itself.
 
-## Source and dependency discipline
+## Human View and demonstrations
 
-- Do not modify the official Makepad repository, rust-makepad-toolkit, or rust-makepad-tools-2 as part of MSS work.
-- Do not copy or vendor the Makepad SDK into this repository.
-- Before adding or changing a dependency, record its exact repository and commit, inspect its public API and license, and evaluate compatibility with the pinned MSS baseline. A version string alone is not a commit pin.
-- Do not call the different Makepad revisions used by the three source projects compatible until a focused compatibility suite passes.
-- Retain the full Toolkit public operation and .aiui.json contract as the target. Changes to the baseline itself require a separate reviewed migration.
-- Do not install dependencies, download executables, or change host configuration without operator authorization. A request to check the existing Cargo workspace authorizes resolving its declared, reviewed dependencies for that check; it does not authorize adding or upgrading dependencies.
+- Human View is the operator's Desktop UI for tabs, guest frames, viewport resize, addressed mouse and keyboard, screenshots and recording. Input and resize depend on the admitted profile, permission, matching window and geometry.
+- Distinguish **Detach view** from **Close selected app**. Detach releases a participant. Closing an owned app requires its launcher exit receipt and process identity.
+- Treat recording packages, app content and logs as task data. Review the selected files and privacy options before exporting or sending. Obtain the operator's explicit send action before submitting material to Codex. The bounded analysis reads the reviewed package through the installed CLI. Live app access uses AI Direct.
 
-## Ownership and input
+## Admission, ownership and cleanup
 
-- Never attach to, inspect, signal, or terminate a process unless MSS created it and still verifies its PID, process-birth identity, executable path, and session binding.
-- Never target an app by process name, title, guessed port, or stale PID alone.
-- Bind each application and test worker to one explicit session and one agent identity. Do not share mutable session state between agents.
-- Send input only through an authenticated, session-addressed app channel. Do not silently replace semantic actions with SendInput, desktop focus, or another physical-input fallback.
-- An input isolation mechanism inside Makepad is not full operating-system isolation. Do not describe MSS as a sandbox unless a separately reviewed OS security boundary is implemented and verified.
+- Use only operator-admitted local binaries. Pin the profile, guest EXE, matching Makepad Remote, PowerShell and launcher as required by [Configuration](CONFIGURATION.md). Keep paths and launch arguments explicit. Verify registered builds and activate or roll back future launches only when authorized.
+- Use the recorded App ID, PID, process birth, image path/hash and Windows session or retained process handle as appropriate to the operation. Attach and signal only within an authorized MSS ownership binding. Guessed ports, titles, executable names and stale PIDs grant no authority. Keep the owner connection open while its application is in use.
+- Use the existing addressed app channel. Global Windows input, physical desktop focus, containers, WSL, WSLC, Hyper-V and VMs are outside this workflow. The trusted local, same-user process model supplies app-level separation. Full OS sandbox enforcement remains unverified.
+- Preserve uncertain mutations as `OUTCOME_UNKNOWN`. On lost Remote or timeout, stop sending changes, consult operation status and obtain independent readback where possible. Reconnect or recover only through an authorized path. Never automatically repeat a mutation after an unknown result.
+- Verify process exit and cleanup for owned processes. Use `mss_recheck_cleanup` for receipt-bound reconciliation. Keep unresolved ownership as `CLEANUP_PENDING`. Preserve failures and evidence. Keep credentials, Remote tokens, private document content and identifying logs out of commits, public artifacts and reports.
 
-## Processes, retries, and cleanup
+## Implementation and verification
 
-- Launch trusted executables with explicit argument arrays and a session-scoped working directory; do not construct shell command strings from agent input.
-- Give each app and test execution its own process. Record process identity and creation evidence before accepting a session.
-- No automatic retry after an uncertain mutation, timeout after dispatch, transport loss during dispatch, or worker loss. Require independent observation or explicit recovery policy.
-- On close, release only resources acquired by that session. Verify process exit and resource release. Quarantine uncertain ownership instead of killing an unverified process.
-
-## Changes and verification
-
-- Map every change to an owner module and a row in doc/testing.md.
-- Choose the cheapest check that can falsify the changed contract, then run every explicitly required higher-level gate. Do not claim live behavior from a Cargo check.
-- Preserve the exact commands, source revisions, result, and evidence references needed to reproduce an acceptance claim.
-- Keep Dungeon SKLT object IDs and declared dependencies stable. SKLT is structural documentation, not executable evidence or OS sandbox proof. GLIF/GLYF projection work is out of scope until separately requested.
-- Do not introduce containers, WSL/WSLC, Hyper-V, virtual machines, or tests that require an interactive Windows desktop.
+- Reuse the pinned Makepad Remote, MSS router and launcher. Parallel Remote, MCP, renderer, test runner or process broker implementations require a separate justified task. Keep upstream Makepad and the other reference projects read-only and keep their source out of this repository. Review exact dependency revisions, APIs and licenses before changing pins. Install or download dependencies only with operator authorization.
+- Map changes to the owning module and the applicable verification contract. Use the current MSS Rust and Python suites. For a native Makepad UI test, use the pinned official `libs/makepad_test` and Rust `#[makepad_test]` where applicable. Test through the real entry point with an owned hidden process, semantic locators, independent postconditions and verified exit. See [Testing](TESTING.md).
+- Preserve existing negative tests and evidence. Use `PASS`, `FAIL`, `BLOCKED`, `NOT_RUN` and `NOT_VERIFIED` as documented. Record exact source, inputs, command, exit status, process/window binding, observations and cleanup. An acknowledgement confirms dispatch only. Distinguish source checks, native GUI checks and installation qualification.
+- Preserve stable SKLT `object_id` values and check documented dependency semantics. SKLT describes structure. Changes to GLIF/GLYF projections require a separate task.

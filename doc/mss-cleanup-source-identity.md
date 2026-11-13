@@ -1,5 +1,7 @@
 # MSS failed-launch reconciliation and loaded-source identity
 
+> **Historical verification record.** The source-only scope and PR state below describe the original check. See the [current preview architecture](architecture.md) and [current verification commands](../TESTING.md).
+
 ## Source boundary
 
 This Draft source change starts at main

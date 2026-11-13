@@ -1,143 +1,45 @@
-# Testing and Toolkit parity
+# Verification contracts and preview evidence
 
-## Explicit user-sequence preflight follow-up
+[Run the source checks](../TESTING.md) · [Architecture](architecture.md) · [Security](../SECURITY.md)
 
-| Contract | Owner | Check | Evidence level |
-| --- | --- | --- | --- |
-| Explicit stale sequence refuses before mutation; unavailable activity is not zero; native guard and unknown outcomes preserved | MSS_MCP router | `test_mss_user_seq.py` | Model-free Router/App dispatch fixtures; live replay NOT_RUN |
+## Verification layers
 
-See [contract, pinned upstream sources and invariant/test mapping](mss-user-sequence-preflight.md).
-The source-only check does not establish native GUI or full Toolkit acceptance.
+| Layer | What it establishes | Executable source or fixture |
+| --- | --- | --- |
+| Rust workspace | Formatting, compilation, static warnings, unit behavior and the stdio contract. | Cargo workspace, [Desktop input geometry](../MSS_Desktop/src/human_input.rs), [recording](../MSS_Desktop/src/recording.rs), [Codex receipt handling](../MSS_Desktop/src/codex_handoff.rs), [MCP stdio integration](../MSS_MCP/tests/gui_tools.rs). The Windows stdio test uses an empty-profile Python router. |
+| Python policy and router | Build/configuration pins, action guards, selected guest/window, sharing, mutation order, user sequence, transfer, cleanup and startup identity. | [MSS_MCP/tests](../MSS_MCP/tests). In particular [user-sequence](../MSS_MCP/tests/test_mss_user_seq.py), [cleanup](../MSS_MCP/tests/test_mss_cleanup.py), [startup manifest](../MSS_MCP/tests/test_mss_startup_manifest.py), [resize](../MSS_MCP/tests/test_mss_resize.py) and [Human View](../MSS_MCP/tests/test_mss_human_view.py). |
+| Retained process handle | Windows PID/birth/image binding and observation after rapid owned helper exit. | [PowerShell retained-handle fixture](../MSS_MCP/tests/Test-RetainedProcessIdentity.ps1). It exercises production launcher helpers. |
+| Native guest and Desktop | Real hidden guest discovery, addressed observations, GPU PNG readback, resize/input where admitted, detach and graceful close. | Separate admitted exact Windows guest/Remote build, process receipt, tool trace, PNG hash and independent postcondition. |
+| Guest UI regression | Actual Makepad app behavior under its pinned Makepad test crate. | Upstream `libs/makepad_test` and `#[makepad_test]` in the guest workspace when its Makepad revision supports them. [Guide at the tested work revision](https://github.com/makepad/makepad/blob/2271c0eb350cedd497c84373f17ad2b0b662cb72/libs/makepad_test/GUIDE.md) |
+| Installation and Codex delivery | Separate MSI and opt-in real Codex executions. | Verify exact installed bytes and runtime paths or verify the approved handoff bytes and delivery receipt. The normal MSS source regressions are model-free. |
 
-## Source-only MCP lifecycle follow-up
+For a guest mutation, capture the prior state, perform the action once, check current app/process/window identity and read an independent postcondition. Use tree/wait, pixels or appropriate runtime state. Include app status and evidence when required by the contract. A transport ACK or screenshot alone does not establish unrelated state. `DISPATCHED` with `effect: NOT_VERIFIED` records dispatch only. Preserve the failure, elapsed time and last observation.
 
-The original scaffold results below remain historical. The Python connector is
-now introduced separately from the Rust implementation. See
-[the bounded lifecycle/identity protocol](mss-cleanup-source-identity.md) and
-[source-bound publication record](cronica/20261107-mss-cleanup-source-publication.json).
-
-| Contract | Owner | Reproducible check | Evidence level |
-| --- | --- | --- | --- |
-| Failed launch with bound exit vs unknown cleanup; repeat and neighbor safety | MSS_MCP launcher/router | `test_mss_cleanup.py` | Model-free policy/receipt fixtures |
-| Frozen five-module identity survives disk changes; two connection IDs | MSS_MCP router | `test_mss_startup_manifest.py` | Real copied stdio processes; no app |
-| Retained handle after fast exit; PID/birth mismatch rejected | MSS_MCP launcher | `Test-RetainedProcessIdentity.ps1` | Windows own helper process; no Makepad |
-| Operator-selected PowerShell path remains pinned | MSS_MCP profile adapter | `test_mss_catalog_runtime.py` | Local non-executable file fixtures |
-| Existing build/shared/transfer contracts | MSS_MCP prerequisite helpers | `test_mss_builds.py`, `test_mss_shared_router.py`, `test_mss_shared_store.py`, `test_mss_transfer.py` | Model-free policy fixtures |
-| Tool routing refuses foreign apps/invalid windows | MSS_MCP adapter | `gui_tools.rs` | Real copied empty-profile MCP; no app |
-
-These checks do not establish MSS_API integration, process sandboxing, GUI
-postconditions, native Makepad lifecycle or full Toolkit parity. Do not promote
-the historical acceptance matrix below from these lower-level results.
+For resize/input checks, record the selected App ID, owned PID/birth, native window, requested/observed layout, DPI and pixel dimensions. Correlate frame hash and test action with the same app. When testing detach and cleanup, check that participant detach leaves the same owner PID alive and that explicit owner close eventually yields a matching exit receipt. Check neighboring instances independently in a multi-app test.
 
 ## Status vocabulary
 
 | Status | Meaning |
-|---|---|
-| PASS | The exact contract passed its required check with retained, attributable evidence. |
-| FAIL | The contract was executed and an observed failure was recorded. |
-| BLOCKED | An attempted check could not run because a named external/environment condition prevented it. Include the attempted command and blocker. |
-| NOT_RUN | No execution evidence exists for this check. |
-| NOT_VERIFIED | Source/design is insufficient to establish the contract, or the required implementation/evidence does not yet exist. |
+| --- | --- |
+| PASS | A named check completed against the exact fixture and retained matching evidence. |
+| FAIL | A named check ran and recorded a failed result or assertion. |
+| BLOCKED | A named prerequisite or environmental condition prevented completion. Include the blocker and the attempted command when available. |
+| NOT_RUN | The check was not executed. |
+| NOT_VERIFIED | Available source, design or lower-level evidence does not establish the claim. |
 
-BLOCKED and NOT_RUN are not passes. Missing, stale, ambiguous, or unowned evidence is not a pass. A transport acknowledgement, build, screenshot, or unit test cannot stand in for a required runtime postcondition.
+Keep execution status separate from operational states such as `OUTCOME_UNKNOWN`, `FAILED_CLOSED` and `CLEANUP_PENDING`. Never replay an uncertain mutation. Inspect its operation and safe readback, then document the outcome before deciding how to recover.
 
-## Acceptance baseline
+## Observed Windows preview evidence
 
-The full Rust Makepad Toolkit public contract and regression suite is the target acceptance baseline. MSS must preserve the .aiui.json schema and scenarios, public Script API, operation catalog, runner semantics, reliability checks, Scheduler behavior, verification-economy policy, evidence, and failure classification. Do not shorten, delete, weaken, or replace Toolkit tests. Any baseline change is separate and requires explicit compatibility review.
+The published source baseline is `04ea3c52d5777adcbd9e36f0bf18572836d1d120`. The following filenames identify retained local proof from the release qualification. These are evidence references, not files shipped in the source preview or MSI.
 
-The parity row stays NOT_VERIFIED until the complete unchanged baseline runs against MSS adapters and passes, including all environment-required scenarios. A source-level operation mapping or an MSS-only test suite cannot establish full parity.
+| Check | Result and scope | Local evidence under `proof/` |
+| --- | --- | --- |
+| Release source checks | Cargo fmt/check/test/Clippy and release build passed. Final Rust 12/12, Python 190/190, retained-handle 8/8. | `release-readiness/BUILD_RESULTS.md`, `release-readiness/TEST_RESULTS.md` |
+| Native multi-app UI | Separate dev EXE exercised two hidden RudraOffice instances and a RudraOffice/AI CAD scenario including resize, input and recording. | `release-readiness/run-resize-20261113-093831144/results.json`, `release-readiness/run-recording-20261113-093831144/results.json` |
+| Relocated release executable | Short-root native guest preview and detach passed. Longer paths reproduced Remote readiness failure while the launcher recorded owned exit. | `release-readiness/run-portable-short-03/results.json`, `release-readiness/path-matrix-7c3d1f4e/results.json` |
+| RC2 and follow-up MSI | Exact RC2 setup/uninstall and empty profile behavior passed on the development host. A separate local prerequisite candidate passed missing-runtime rejection and 7/7 installed-path checks with standalone Python/PowerShell outside Codex cache. | `release-readiness/msi-rc2-aaef2629b3114fabb33ef5263aff4aab/result.json`, `release-readiness/CHECKS-A-B.md`, `release-readiness/run-installed-standalone-03/results.json` |
+| Real recording handoff | Separate dev build retained a real Codex response bound to the approved export. Its original harness failed after receipt while parsing the displayed path. A readback of existing evidence verified delivery without a second send. | `codex-demonstration-handoff/REPORT.md` |
+| Clean Windows host, portability, protected execution | Clean-host resource independence NOT_RUN. Public binary redistribution BLOCKED. OS sandbox, unattended dispatcher qualification and full Toolkit parity NOT_VERIFIED. | `release-readiness/check-b-license/REPORT.md` |
 
-## Summary acceptance matrix
-
-| Toolkit/source contract | Required MSS behavior and proof | Status |
-|---|---|---|
-| session.open, session.list, session.close | Per-agent ownership, no silent default-session fallback, identity-checked close, verified process/resource release | NOT_VERIFIED |
-| App executable and literal argument launch | Separate process per app; trusted executable policy; exact PID/birth/path/digest evidence; no shell-string execution | NOT_VERIFIED |
-| inspect_ui, inspect_semantic, read | Session-scoped semantic tree/state and independent readback, including stale/unknown target errors | NOT_VERIFIED |
-| set_value, input, click, focus, toggle, choose, selection operations | Preserve each public semantic operation and its declared physical-input behavior; prove target and resulting state; no unproven fallback substitution | NOT_VERIFIED |
-| UIA invoke/value actions and physical-input fallbacks | Preserve Toolkit execution-method reporting, input-lock/focus requirements, failure taxonomy, and desktop resource semantics | NOT_VERIFIED |
-| Waits, assertions, postconditions, wait_until, wait_idle | Bounded polling; include last observation and app health; unmet condition is a failure, not timeout-as-success | NOT_VERIFIED |
-| Runtime health and recognized Makepad/Script errors | Detect/report runtime failure even after the action endpoint acknowledged dispatch | NOT_VERIFIED |
-| .aiui.json version 1 schema | Validate unchanged public schema; preserve application, options, variables, setup, steps, teardown, cases, tags, and metadata | NOT_VERIFIED |
-| Script controls, dependencies, expected errors, extraction and redaction | Preserve public runner execution order and reports; test success and negative/error cases without schema simplification | NOT_VERIFIED |
-| Scheduler queue, worker capability, leases, cancellation, application limits | Run independent worker processes; enforce eligibility and resource capacity; verify queue and leases drain | NOT_VERIFIED |
-| Retry policy, timeout, worker loss and uncertain mutation | Preserve idempotency classifications; no automatic replay after uncertain mutation; verify recovery and quarantine | NOT_VERIFIED |
-| Test report, screenshots, exported evidence, runtime timeline | Bind artifacts to exact script, session, app build, process identity, request, state, timestamps, and hashes; redact secrets | NOT_VERIFIED |
-| Makepad --remote input and screenshot/readback | Verify endpoint belongs to launched app; validate per-agent authorization, operation parity, no desktop focus dependency, observed postconditions, and health | NOT_VERIFIED |
-| Multiple agents and simultaneous Makepad apps | Prove N independent sessions with no crossed commands, state, frame, test job, evidence, or cleanup; show separate process identities | NOT_VERIFIED |
-| Native app frames in MSS_Desktop | Capture and display current app-originated frame per session; prove freshness, renderer reset handling, and claimed GPU/platform support | NOT_VERIFIED |
-| MCP integrations | Conformance for each supported client over one common MSS_API; verify caller/session authorization and failure semantics | NOT_VERIFIED |
-| Graceful close and cleanup | Stop only owned workers/apps; verify process exit, handle/channel/resource release, and evidence flush; retain unresolved state | NOT_VERIFIED |
-| Complete unchanged Toolkit regression suite | Record exact baseline revision and command; do not remove or weaken any existing test; retain full report and evidence | NOT_RUN |
-| Cargo workspace metadata | cargo metadata --no-deps --format-version 1 for the seven-member published workspace | PASS |
-| Cargo workspace check | cargo check --workspace --all-targets for the seven-member published workspace | PASS |
-
-These two scaffold checks do not imply any runtime acceptance.
-
-## Public operation matrix
-
-The following names are from the Toolkit operations catalog at the baseline SHA in compatibility.md. MSS must preserve every operation's arguments, capability, input method, result, error, postcondition, and evidence behavior. Grouping is for review only; it does not merge or replace contracts.
-
-| Operation group | Toolkit public operations | Toolkit test/reference surface | Required MSS proof | Status |
-|---|---|---|---|---|
-| Session and discovery | session.open, session.list, session.close, acquire_input_lock, release_input_lock, inspect_ui, inspect_semantic, inspect_spatial_target, read, wait_for_automation_id | operations.json; reliability session/window identity; script runner session binding | Per-agent ownership, no default-session fallback, exact session/process identity, stale/foreign session rejection, verified close | NOT_VERIFIED |
-| Semantic and widget actions | set_value, input, click, focus, double_click, right_click, toggle, choose, select, add_to_selection, remove_from_selection, clear_selection, select_many, select_range | operations.json; ai-ui-test-script.schema.json; reliability verified actions and postconditions; contract-negative.aiui.json | Preserve action meaning, input method, target capability, readback, expected errors, and postconditions. No unproven fallback substitution | NOT_VERIFIED |
-| Pointer, keyboard, scroll, and drag | ensure_visible, scroll, scroll_to_start, scroll_to_end, move_pointer, pointer_down, pointer_up, click_relative, double_click_relative, right_click_relative, hover_relative, wheel_relative, drag, drag_to, drag_relative, select_region, hotkey, press, press_repeat, type_text, activate_window | operations.json; spatial-smoke.aiui.json; spatial-suite.aiui.json; scheduler Windows E2E examples | Preserve Toolkit operation semantics and physical-input labels. Prove addressed app behavior without an interactive desktop; retain unsupported operations explicitly | NOT_VERIFIED |
-| Window controls | windows_set_window_bounds, inspect_window_interaction, windows_drag_title, windows_resize_frame, windows_double_click_title, windows_set_window_state | operations.json; reliability session/window identity; focused-window.aiui.json; windows-ui-composition.aiui.json | Verify exact owned window and resulting bounds/state; no focus of user desktop or foreign process | NOT_VERIFIED |
-| Waits and assertions | wait_for_value, wait_for_state, wait_until, wait_visible, wait_hidden, wait_enabled, wait_disabled, wait_selected, wait_count, wait_idle, assert_visible, assert_interactable, assert_valid_bounds, assert_canvas_healthy, get_canvas_health | operations.json; reliability waits, assertions and compact trees; semantic-ui-composition.aiui.json; windows-ui-composition.aiui.json | Bounded polling, last observation, runtime health, exact assertion result, and failure on unmet condition | NOT_VERIFIED |
-| Screenshots and visual assertions | screenshot_window, screenshot_element, capture_region, windows_capture_region, assert_not_blank, assert_region_changed, assert_region_unchanged, assert_similarity, compare_screenshot, get_makepad_visual_diagnostics | operations.json; async-observation-visual-failure.aiui.json; frozen-smoke and GPU-rendering profiles | Bind capture to app/session/generation, preserve dimensions and timing, verify visual predicates, and reject stale/cross-session frames | NOT_VERIFIED |
-| Runtime and asynchronous task checks | get_runtime_health, get_runtime_stderr, get_task_state, wait_for_task, wait_for_task_state, wait_for_task_complete, assert_task_success, get_runtime_milestones, wait_for_runtime_milestone, assert_runtime_milestone, get_runtime_timeline | operations.json; RELIABILITY.md; async-observation-success.aiui.json; async-observation-task-fails.aiui.json; async-observation-missing-milestone.aiui.json | Preserve health, task, milestone, timeline and runtime-failure behavior; action acknowledgement alone never passes | NOT_VERIFIED |
-| API and file postconditions | get_api_request_state, wait_for_api_state, wait_for_api_response, assert_api_success, assert_api_failure, wait_for_file, assert_file_exists, assert_file_not_exists, assert_file_size, assert_file_count, assert_file_hash, wait_for_file_stable | operations.json; async-observation-api-* and async-observation-file-* fixtures | Preserve timeout, HTTP, invalid-response, acceptance, file stability, path ownership, and content postconditions | NOT_VERIFIED |
-| Logs, traces, cleanup and evidence | windows_export_evidence, windows_validate_evidence, get_application_logs, wait_for_log, assert_log_contains, assert_log_not_contains, assert_trace_event, assert_no_stale_window, assert_no_pending_task, assert_no_phantom_semantic_node | operations.json; Toolkit evidence.rs; RELIABILITY.md; error-collection.aiui.json; failure evidence fixtures | Bind reports and artifacts to script, source, session, process, request and state; retain redaction, cleanup failures and no-stale-resource assertions | NOT_VERIFIED |
-| Script controls | repeat_until, wait_for_outcome, click_once_and_wait_for_outcome | public schema and runner; full-script-e2e.aiui.json; script-self-test.aiui.json; async observation fixtures | Preserve ordering, bounded repeats, dependencies, expected errors, extraction, teardown, status and report behavior | NOT_VERIFIED |
-
-Toolkit distinguishes action mechanisms. Its catalog marks set_value as not requiring physical input, while input, click, focus, pointer, keyboard and scroll operations are marked physical-input operations. MSS must not silently implement input or click by calling set_value, or the reverse. Any changed mechanism needs its own measured semantic parity proof and remains NOT_VERIFIED until accepted.
-
-## Toolkit verification and test inventory
-
-| Baseline test surface | Source scenarios or checks to retain | MSS acceptance evidence | Status |
-|---|---|---|---|
-| Script contract and runner | Public schema, operation catalog, runner; basic-auto-probe, full-script-e2e, contract-negative, script-self-test, error-collection, spatial-smoke and spatial-suite examples | Same input scripts and reports through the public runner contract; all negative and teardown cases preserved | NOT_VERIFIED |
-| Reliability | Session/window identity, semantic and physical action reporting, postconditions, runtime health, waits, assertions, compact trees in RELIABILITY.md | Complete unchanged reliability checks pass with session/process-bound observations | NOT_VERIFIED |
-| Async and external observations | async-observation success, task failure, missing milestone, visual failure, API timeout/HTTP/invalid/not-accepted, missing/unstable file fixtures | All success and failure categories retain their original result and evidence | NOT_VERIFIED |
-| Scheduler | Scheduler unit tests, queue/lease/resource and capability checks, worker-loss and mixed-environment verification code | Worker processes are independent; capacities and lease recovery hold; queue and leases drain; no duplicate uncertain mutation | NOT_VERIFIED |
-| Windows and spatial E2E | Existing windows-e2e suite, focused-window, windows-ui-composition, physical-advanced and physical-spatial scenarios | Preserve all scenarios and assertions. MSS acceptance must not depend on interactive Windows desktop; replace no test and do not claim the prohibited physical path passed | NOT_VERIFIED |
-| Semantic Makepad profile | focused-semantic, semantic-ui-composition and frozen-smoke scenarios | Same public scripts pass through the addressed app channel with readback, health and evidence | NOT_VERIFIED |
-| Scheduler worker profile | focused-worker, workers-composition and frozen-smoke scenarios | Simultaneous independent sessions plus worker-loss, recovery, isolation and cleanup evidence | NOT_VERIFIED |
-| GPU/render profiles | GPU-rendering and Makepad Linux profile scenarios | Real app-originated frame evidence for each claimed platform; no static or synthetic image acceptance | NOT_VERIFIED |
-| Verification economy and CI | Toolkit verification policy, plans, result recording, verification-core tests and existing CI checks | Preserve policy, required gates and evidence; no skipped mandatory scope | NOT_VERIFIED |
-| Full Toolkit regression baseline | All existing Toolkit tests and scenarios, unchanged at the pinned baseline | Full attributable report with no test deletion, skip, weakening, or replacement | NOT_RUN |
-
-Some source profiles exercise containers, WSL/WSLC, or an interactive Windows desktop. MSS must not use those environments. Their source tests remain untouched; a claim depending on their execution is BLOCKED or NOT_VERIFIED under MSS constraints until an allowed equivalent proves the same contract. BLOCKED is recorded only after an actual attempted run.
-
-## Scenario layers
-
-1. **Static contract:** schema, API envelopes, operation mapping, dependency pins, permissions, and module boundaries.
-2. **Pure Rust checks:** identity validation, state transitions, protocol parsing, result classification, and bounded evidence metadata.
-3. **Owned-process checks:** launch/attach only to MSS-created processes; verify process-birth identity, per-session routing, crash and worker-loss behavior.
-4. **Headless addressed-input checks:** semantic Makepad operations and readback with no interactive Windows desktop, foreground focus, or global input.
-5. **Rendering checks:** real app-renderer frame capture and independent per-session delivery to the Desktop.
-6. **Composition checks:** unchanged .aiui.json behavior through MCP/API, app process, Toolkit runner, postconditions, reports, redaction, and cleanup.
-7. **Parallel and failure checks:** multiple independent agents/apps/test workers; transport loss, runtime failure, cancellation, unknown mutation outcome, quarantine, and cleanup.
-8. **Acceptance run:** complete Toolkit regression baseline plus all required MSS composition/risk gates for the claimed platform.
-
-Lower layers do not replace a required higher layer. Tests must not launch or depend on an interactive Windows desktop. If a contract cannot be exercised without that dependency, report the specific limitation and leave its MSS acceptance NOT_VERIFIED.
-
-## Evidence required for a test PASS
-
-- Exact MSS source commit and dependency revisions.
-- Exact Toolkit baseline revision, scenario/script hash, test command and environment profile.
-- Session, agent, process PID/birth identity, executable identity, and app build/source identity.
-- Request/dispatch classification plus an independent postcondition and runtime-health observation.
-- Evidence references and hashes for required reports, screenshots, traces, and cleanup.
-- Proof of no cross-session routing or artifacts for parallel acceptance.
-
-## Current results
-
-On 2026-10-30, `cargo metadata --no-deps --format-version 1` and `cargo check --workspace --all-targets` passed for the seven-member workspace using the exact Makepad revision recorded in `Cargo.lock`. `cargo fmt --all -- --check` and `git diff --check` also passed. Cargo reported duplicate package names inside the pinned Makepad source tree and copied incremental-cache files where hard links were unavailable; these warnings did not prevent the check from completing.
-
-No MSS behavioral test has run. The complete unchanged Toolkit regression suite remains NOT_RUN for this architecture-scaffold task. Runtime, GUI, multi-session, addressed-input, rendering, MCP, and cleanup acceptance remain NOT_VERIFIED as shown in the matrix above.
-
-## Windows source preview
-
-The preview uses a separately configured user data root and the existing launcher. The targeted Windows verification covers an empty relocated Desktop and MCP catalog, discovery and attachment to an explicitly admitted external RudraOffice, a matching native and displayed frame, detach, and owned process cleanup. A shorter data root succeeded after two readiness failures with longer paths. Clean-machine qualification and the binary redistribution inventory remain open.
+Keep the exact checkout commit or diff hash, command and exit code, runtime versions, artifact and executable hashes, process/window identity, cleanup and known limitations with each result. Use an independent allowed runtime observation for live claims. The old Toolkit inventory and Scheduler acceptance proposal are retained as [historical research](history/initial-architecture/testing.md).

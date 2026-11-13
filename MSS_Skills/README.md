@@ -1,19 +1,5 @@
 # MSS_Skills
 
-No tools, credentials, or session permissions are granted by this module. It contains documentation only.
+**PARTIAL.** Agent guidance is available as repository documentation. This module contains this index and its [SKLT record](mss_skills.sklt). An installable skill package and a runtime integration are planned.
 
-## Responsibility
-
-Give AI agents concise, versioned instructions for discovering MSS capabilities, binding to their assigned session, using MCP/API/SDK safely, interpreting outcomes, and preserving test evidence.
-
-## Planned contents
-
-- A capability and status glossary that never equates acknowledgement with success.
-- Session binding and authorization rules.
-- .aiui.json preservation and test-run instructions.
-- Safe handling of NOT_VERIFIED, OUTCOME_UNKNOWN, runtime failures, and cleanup failures.
-- Examples that use public MSS_API/MCP contracts and do not bypass session ownership.
-
-## Current state
-
-This README is the only skill content. No installable agent skill package or tool integration is available yet.
+Use [AGENTS.md](../AGENTS.md) for mandatory AI Direct, Human View, admission, cleanup and evidence rules. Use the [MSS MCP tool reference](../MSS_MCP/README.md) for actual calls, [Configuration](../CONFIGURATION.md) for owner setup, and [Testing](../TESTING.md) for native Makepad UI tests. These documents grant no process permissions or credentials.

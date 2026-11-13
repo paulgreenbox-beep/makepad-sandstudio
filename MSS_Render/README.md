@@ -1,15 +1,7 @@
 # MSS_Render
 
-## Responsibility
+**SCAFFOLD** in `0.1.0-preview.1`. The workspace builds [mss-render](Cargo.toml). Its [library](src/lib.rs) reports `NotImplemented` and declares no Cargo dependencies.
 
-Capture frames originating from each Makepad application's renderer, deliver them through MSS_API, and display the selected session in MSS_Desktop with freshness and ownership metadata.
+Makepad Remote captures guest pixels. The [router](../MSS_MCP/tools/mss_universal.py) records the capture kind, app and window, dimensions and digest. The [Desktop client](../MSS_Desktop/src/remote_client.rs) verifies its app and window binding and decodes the PNG for the selected tab. AI Direct can request a guest capture independently.
 
-## Planned frame contract
-
-A frame should be bound to session ID, app process identity, renderer generation, monotonically increasing sequence, capture time, dimensions, pixel format, and a content digest. A stale frame or a frame from another session must not appear as the selected app's current state.
-
-The inspected Makepad app Remote can request app-side GPU readback and return PNG data. This is a capture candidate, not proof of a general native GPU sharing API. The inspected hosted Vulkan code transfers swapchain descriptors on a Linux path; it does not establish a cross-platform MSS frame API. HostedView provides two presentations within one app, not multiple independent app sessions.
-
-## Current state
-
-No frame transport, GPU interop, API stream, or Desktop display is implemented. Native rendering and per-session frame ownership remain NOT_VERIFIED.
+The [SKLT declaration](mss_render.sklt) reserves a future Rust frame-delivery boundary. The preview uses app-originated PNGs. Shared GPU textures, hosted-child composition and a dedicated Rust frame API are outside this path. See the [current architecture](../doc/architecture.md) and [verification](../doc/testing.md).
