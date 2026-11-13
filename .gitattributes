@@ -6,3 +6,7 @@ MSS_MCP/profiles/*.json text eol=lf
 Cargo.toml text eol=lf
 Cargo.lock text eol=lf
 *.wxs text eol=lf
+
+# Preserve the exact upstream notice bytes and their original whitespace.
+packaging/windows/licenses/DEPENDENCY-LICENSES.txt -text whitespace=-blank-at-eol,-blank-at-eof
+packaging/windows/licenses/RUST-COPYRIGHT.html -text whitespace=-blank-at-eol,-blank-at-eof

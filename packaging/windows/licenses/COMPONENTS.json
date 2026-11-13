@@ -1,0 +1,1161 @@
+{
+  "schema": "mss.preview.windows.notice-components.v1",
+  "scope": "Windows Desktop candidate as inspected from the exact executable and transitive Cargo fingerprint graph.",
+  "makepad_source_revision": "130be1d0318adcf69453d925342607466353152c",
+  "mss_base_revision": "d496c9e18cab17a346cbc9fdc7c35ba864377782",
+  "target": "x86_64-pc-windows-msvc",
+  "rust_toolchain": {
+    "version": "1.97.1",
+    "commit": "8bab26f4f68e0e26f0bb7960be334d5b520ea452",
+    "notice": "RUST-COPYRIGHT.html"
+  },
+  "fonts": [
+    {
+      "path": "resources/makepad_widgets/resources/IBMPlexSans-Text.ttf",
+      "bytes": 181792,
+      "sha256": "8c358c56c56f76a28cecb8ca10734c1c9cafa01a752dc8364b9ef7de412437dc",
+      "sfnt_names": {
+        "0": "Copyright 2018 IBM Corp. All rights reserved.",
+        "1": "IBM Plex Sans Text",
+        "3": "3.3;IBM ;IBMPlexSans-Text",
+        "5": "Version 3.3",
+        "13": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: http://scripts.sil.org/OFL",
+        "14": "http://scripts.sil.org/OFL"
+      },
+      "license": "SIL-OFL-1.1",
+      "notice": "IBM-Plex-Sans-OFL.txt",
+      "upstream_comparison": {
+        "revision": "5be844361a10980927f4ccfb52297efb9fc90a64",
+        "status": "byte_identical"
+      }
+    },
+    {
+      "path": "resources/makepad_widgets/resources/IBMPlexSans-SemiBold.ttf",
+      "bytes": 182176,
+      "sha256": "391bd290357cb19bacccd66dc82f3213e0c66c34025a4dd3e15c49d3db7c585e",
+      "sfnt_names": {
+        "0": "Copyright 2018 IBM Corp. All rights reserved.",
+        "1": "IBM Plex Sans SmBld",
+        "3": "3.3;IBM ;IBMPlexSans-SmBld",
+        "5": "Version 3.3",
+        "13": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: http://scripts.sil.org/OFL",
+        "14": "http://scripts.sil.org/OFL"
+      },
+      "license": "SIL-OFL-1.1",
+      "notice": "IBM-Plex-Sans-OFL.txt",
+      "upstream_comparison": {
+        "revision": "5be844361a10980927f4ccfb52297efb9fc90a64",
+        "status": "byte_identical"
+      }
+    },
+    {
+      "path": "resources/makepad_widgets/resources/IBMPlexSans-Italic.ttf",
+      "bytes": 184020,
+      "sha256": "21effb0b8dabbbd6548db1c581c68c6335f6ffaabd6946a6a73ade24dec050eb",
+      "sfnt_names": {
+        "0": "Copyright 2018 IBM Corp. All rights reserved.",
+        "1": "IBM Plex Sans",
+        "3": "3.2;IBM ;IBMPlexSans-Italic",
+        "5": "Version 3.2",
+        "13": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: http://scripts.sil.org/OFL",
+        "14": "http://scripts.sil.org/OFL"
+      },
+      "license": "SIL-OFL-1.1",
+      "notice": "IBM-Plex-Sans-OFL.txt",
+      "upstream_comparison": {
+        "status": "exact_binary_origin_not_verified",
+        "license_basis": "embedded name records identify the IBM original family, copyright and SIL OFL 1.1"
+      }
+    },
+    {
+      "path": "resources/makepad_widgets/resources/IBMPlexSans-BoldItalic.ttf",
+      "bytes": 184656,
+      "sha256": "451f1e35cf09ef4411c9f38e7eb7d4967aef427c52e048dff26cc36393937882",
+      "sfnt_names": {
+        "0": "Copyright 2018 IBM Corp. All rights reserved.",
+        "1": "IBM Plex Sans",
+        "3": "3.2;IBM ;IBMPlexSans-BoldItalic",
+        "5": "Version 3.2",
+        "13": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: http://scripts.sil.org/OFL",
+        "14": "http://scripts.sil.org/OFL"
+      },
+      "license": "SIL-OFL-1.1",
+      "notice": "IBM-Plex-Sans-OFL.txt",
+      "upstream_comparison": {
+        "status": "exact_binary_origin_not_verified",
+        "license_basis": "embedded name records identify the IBM original family, copyright and SIL OFL 1.1"
+      }
+    },
+    {
+      "path": "resources/makepad_widgets/resources/LiberationMono-Regular.ttf",
+      "bytes": 108168,
+      "sha256": "3e396ddd3d1c7d3dca1fb16dd64802b32f295f856ac10c0c1f2ab1c738196045",
+      "sfnt_names": {
+        "0": "Digitized data © 2007 Ascender Corporation. All rights reserved.",
+        "1": "Liberation Mono",
+        "3": "FontForge 2.0 : Liberation Mono Regular : 12-1-2009",
+        "5": "Version 1.04",
+        "13": "Use of this Liberation font software is subject to the license agreement under which you accepted the Liberation font software.",
+        "14": "http://www.ascendercorp.com/liberation.html"
+      },
+      "license": "GPL-2.0 with Red Hat Liberation Font Software exceptions; exact corresponding source BLOCKED",
+      "notice": "Liberation-Fonts-1.04-License.txt",
+      "upstream_comparison": {
+        "status": "corresponding_source_and_distribution_route_blocked",
+        "historical_1_04_ttf_sha256": "b9235ede844d45cecc2b842198cac7a507cd7f91f68c5584c40ac80ecf495492",
+        "near_match_1_04_93_devel_ttf_sha256": "cce17a4f9029c2d7c4216738bd49d9d156f518820b01ebc35fc9dea82116abc2",
+        "near_match_different_tables": [
+          "head",
+          "name"
+        ],
+        "source_archive_sha256": "1cf46049ecde9551440d2227eeb3f896d7dfe17c915561d080942a89484cf4d2",
+        "source_archive": "https://archive.debian.org/debian/pool/main/t/ttf-liberation/ttf-liberation_1.04.93.orig.tar.gz"
+      }
+    },
+    {
+      "path": "resources/makepad_widgets/resources/fa-solid-900.ttf",
+      "bytes": 426112,
+      "sha256": "d2f0593540b0e33ba6de255a54f272d466e31144806956bea8cfdbf7edffc9bd",
+      "sfnt_names": {
+        "0": "Copyright (c) Font Awesome",
+        "1": "Font Awesome 6 Free Solid",
+        "3": "Font Awesome 6 Free Solid-6.7.2",
+        "5": "Version 775.01953125 (Font Awesome version: 6.7.2)"
+      },
+      "license": "SIL-OFL-1.1",
+      "notice": "Font-Awesome-Free-6.7.2-LICENSE.txt",
+      "upstream_comparison": {
+        "revision": "af620534bfc3c2d4cbefcfeec29603bbe7809e64",
+        "tag": "6.7.2",
+        "official_ttf_sha256": "af19d135d3a935b3ebfbd80320716ffe1202052c5f68dc2c5f1abc57005ac605",
+        "status": "sfnt_head_checksum_and_timestamps_only"
+      }
+    },
+    {
+      "path": "resources/makepad_widgets/resources/LXGWWenKaiRegular.ttf",
+      "bytes": 19073964,
+      "sha256": "0819604ad9357afbc6e7cc097328a16ed85143ee0848ffda09fda35a30da6506",
+      "sfnt_names": {
+        "0": "Copyright 2021-2024 LXGW (https://github.com/lxgw/LxgwWenKai)\r\nCopyright 2020 The Klee Project Authors (https://github.com/fontworks-fonts/Klee)",
+        "1": "LXGW WenKai",
+        "3": "LXGW WenKai:Version 1.330",
+        "5": "Version 1.330;April 28, 2024",
+        "13": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: https://scripts.sil.org/OFL",
+        "14": "https://scripts.sil.org/OFL"
+      },
+      "license": "SIL-OFL-1.1",
+      "notice": "LXGW-WenKai-OFL.txt",
+      "upstream_comparison": {
+        "revision": "5dea838d5202323f27de77cdc5436e9d214d8fb4",
+        "tag": "v1.330",
+        "status": "byte_identical"
+      }
+    },
+    {
+      "path": "resources/makepad_widgets/resources/LXGWWenKaiBold.ttf",
+      "bytes": 18546748,
+      "sha256": "7a356605eb36c92e29cc64090e2856e4675694572a2ae4da84adbadffecae907",
+      "sfnt_names": {
+        "0": "Copyright 2021-2024 LXGW (https://github.com/lxgw/LxgwWenKai)\r\nCopyright 2020 The Klee Project Authors (https://github.com/fontworks-fonts/Klee)",
+        "1": "LXGW WenKai",
+        "3": "LXGW WenKai Bold:Version 1.330",
+        "5": "Version 1.330;April 28, 2024",
+        "13": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: https://scripts.sil.org/OFL",
+        "14": "https://scripts.sil.org/OFL"
+      },
+      "license": "SIL-OFL-1.1",
+      "notice": "LXGW-WenKai-OFL.txt",
+      "upstream_comparison": {
+        "revision": "5dea838d5202323f27de77cdc5436e9d214d8fb4",
+        "tag": "v1.330",
+        "status": "byte_identical"
+      }
+    },
+    {
+      "path": "resources/makepad_widgets/resources/NotoColorEmoji.ttf",
+      "bytes": 10643852,
+      "sha256": "39ee3c587e10e89669b9ff32703261d10d5f9c4dd5ad147b6b5a1c5200591817",
+      "sfnt_names": {
+        "0": "Copyright 2022 Google Inc.",
+        "1": "Noto Color Emoji",
+        "3": "Noto Color Emoji",
+        "5": "Version 2.047;GOOG;noto-emoji:20240827:6c211821b8442ab3683a502f9a79b2034293fced",
+        "13": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This Font Software is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the SIL Open Font License for the specific language, permissions and limitations governing your use of this Font Software.",
+        "14": "http://scripts.sil.org/OFL"
+      },
+      "license": "SIL-OFL-1.1",
+      "notice": "Noto-Color-Emoji-OFL.txt",
+      "upstream_comparison": {
+        "revision": "22e564626297b4df0a40570ad81d6c05cc7c38bd",
+        "tag": "v2.047",
+        "status": "byte_identical"
+      }
+    }
+  ],
+  "font_asset_manifest": {
+    "set": "International",
+    "sha256": "04fcb098b32737e14e170b081497ebd497935cb9302ea193e2da814715b781cf"
+  },
+  "external_prerequisites": [
+    "Microsoft Windows x64",
+    "Windows graphics drivers",
+    "CPython",
+    "PowerShell",
+    "Makepad Remote",
+    "approved guest EXEs",
+    "Codex CLI for explicit recording submissions"
+  ],
+  "build_tools_not_in_payload": [
+    "WiX Toolset",
+    "Cargo",
+    "rustc",
+    "MSVC SDK/toolchain"
+  ],
+  "publication_status": "BLOCKED",
+  "desktop_executable": {
+    "sha256": "bd1043877aeb4accb363f534953e9c8a3e7fab5a28a3c3d6e416b5bfc2cb97a1",
+    "bytes": 18206720
+  },
+  "embedded_svg": {
+    "unique_payloads": 223,
+    "families": {
+      "omarchy": {
+        "generator": 21,
+        "checked_in_extra_icon": 8,
+        "makepad_file_glyph_mirror": 9
+      },
+      "macos": {
+        "generator": 30,
+        "checked_in_extra_icon": 8
+      },
+      "windows": {
+        "generator": 30,
+        "checked_in_extra_icon": 8
+      },
+      "windows-2000": {
+        "generator": 30,
+        "checked_in_extra_icon": 8
+      },
+      "nextstep": {
+        "generator": 30,
+        "checked_in_extra_icon": 8
+      },
+      "ios": {
+        "generator": 30,
+        "checked_in_extra_icon": 8
+      },
+      "android": {
+        "generator": 30,
+        "checked_in_extra_icon": 8
+      }
+    },
+    "source_revision": "130be1d0318adcf69453d925342607466353152c"
+  },
+  "desktop_cargo_build": {
+    "unit_count": 72,
+    "package_count": 66,
+    "cargo_metadata_sha256": "12542fc0860f8fe5139ff778120ce0067e81399f3d78c468355e6d53bfb6f881",
+    "compiler_event_log_sha256": "62822ac14de72ba28529790450280c9a5aa42b11d5c4c2f4c7a4d692ee5d0223",
+    "exact_final_linker_symbol_membership": "NOT_VERIFIED",
+    "packages": [
+      {
+        "name": "ab_glyph_rasterizer",
+        "version": "0.1.8",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/ab_glyph_rasterizer/Cargo.toml",
+        "manifest_sha256": "ea4e9dbcec6b3a6aa2e6e7b1143dd6aa546cdcaf9410493420abcc8a40c45f80",
+        "license": "Apache-2.0",
+        "original_notice_files": [
+          "c3a09c82fcbcd79b-LICENSE"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "bitflags",
+        "version": "2.10.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/bitflags/Cargo.toml",
+        "manifest_sha256": "dacacea2ed0d7dedb3e10c61a8d1693c8713da410b13d959b0e3a4b23c7dc431",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [
+          "705aaaaecefa087c-LICENSE-MIT",
+          "7cfd738c53d61c79-LICENSE-APACHE"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "bytemuck",
+        "version": "1.25.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/bytemuck/Cargo.toml",
+        "manifest_sha256": "a9bd977b45272250b90630b543db0712daecfc8bed8c13ee63398521eef28f27",
+        "license": "Zlib OR Apache-2.0 OR MIT",
+        "original_notice_files": [
+          "0b2d108c9c686a74-LICENSE-MIT",
+          "682b4c81b85e83ce-LICENSE-ZLIB",
+          "870e20c217d15bcf-LICENSE-APACHE"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "byteorder",
+        "version": "1.5.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/byteorder/Cargo.toml",
+        "manifest_sha256": "c08122ee435328c8cd9353ae464ec286ae6f404227a6cc5aa7c3691282528f99",
+        "license": "Unlicense OR MIT",
+        "original_notice_files": [
+          "640514163b17f977-UNLICENSE",
+          "970813655a1bf777-LICENSE-MIT",
+          "dfe7d0a6134a17d3-COPYING"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "foldhash",
+        "version": "0.2.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/vulkan/foldhash/Cargo.toml",
+        "manifest_sha256": "ec2446c2455dccd870475832aeef558336ddb54db97fccd93cf5d43a28f83114",
+        "license": "Zlib",
+        "original_notice_files": [
+          "da44041b45ac127f-LICENSE"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "fxhash",
+        "version": "0.2.1",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/fxhash/Cargo.toml",
+        "manifest_sha256": "74a522d9a099a2bfbd45b11f369e62c9a8fa2a97a8b667212d908adfa498f559",
+        "license": "Apache-2.0/MIT",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-byteorder-lite",
+        "version": "0.1.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/byteorder-lite/Cargo.toml",
+        "manifest_sha256": "c5955fe2f7bea951ea49f3ce38e680f29e09acf5c00feb5b1eb76e05e3881af5",
+        "license": "Unlicense OR MIT",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-derive-widget",
+        "version": "2.0.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/widgets/derive_widget/Cargo.toml",
+        "manifest_sha256": "be5668d8b0d8d1641c09cb212f4c7d692ee1dd65abcaa4a2dd37f0b233765268",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "proc-macro"
+        ]
+      },
+      {
+        "name": "makepad-draw",
+        "version": "2.0.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/draw/Cargo.toml",
+        "manifest_sha256": "a4f64ff61ce9d4ca397cbd293f3a462c368adb782deea4fdd52869a2022b1607",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-error-log",
+        "version": "1.0.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/error_log/Cargo.toml",
+        "manifest_sha256": "f36fc1829f0b2bd460917a08e3a9299fc7a3398196530978a9ca1cc42ddb4a1e",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-fast-inflate",
+        "version": "0.1.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/fast_inflate/Cargo.toml",
+        "manifest_sha256": "ccac8e97d53b1e7dbcf425f7afc43f99ce9800e8c6c7383eeb25e021ed2f8a67",
+        "license": "Makepad root MIT for Makepad-authored code; see derivative notices",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-filesystem-watcher",
+        "version": "0.1.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/filesystem_watcher/Cargo.toml",
+        "manifest_sha256": "55f25fc60a05a400b05aa9ca2ebfb768c160cc539291a96b6f76afa3cb032503",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-futures",
+        "version": "1.0.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/futures/Cargo.toml",
+        "manifest_sha256": "ba80c73eca36669c8335234b12e4fbbf4ddc10cafc14b75b4f41d1ea47119b02",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-futures-legacy",
+        "version": "1.0.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/futures_legacy/Cargo.toml",
+        "manifest_sha256": "eb47109eddc471fa08a63a5df0c66203cc6b3efa5bb92200ac1039f9266d1df6",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-gif",
+        "version": "0.1.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/gif/Cargo.toml",
+        "manifest_sha256": "b5a87aa8456aae87c39518ece71449c05635cd6f7dec49fbf30be2e6a77b73fc",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [
+          "2eb360462a7a2962-LICENSE-MIT",
+          "b8601fc79bdf8d80-LICENSE-APACHE"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-git",
+        "version": "0.1.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/git/Cargo.toml",
+        "manifest_sha256": "7c53adc293196953baa10f1ebf01385cf67c52d42b41a91c6512b9717f71b5d1",
+        "license": "Makepad root MIT for Makepad-authored code; see derivative notices",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-html",
+        "version": "1.0.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/html/Cargo.toml",
+        "manifest_sha256": "3ad3dd699d4b6f34ab176043c07bd21b715cd98d42c4d4e9c634cc81b6b97955",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-key-code",
+        "version": "0.1.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/platform/key_code/Cargo.toml",
+        "manifest_sha256": "bd2cffc44ed2eca14f46cff51381537a170058de9a0102f9d3f32ff2cd9c6755",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-live-id",
+        "version": "1.0.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/live_id/Cargo.toml",
+        "manifest_sha256": "5a22a61a2e8fbabe6c07b2e4c55f3144d9ce64aaa77b5f2be1c898e31614e92b",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-live-id-macros",
+        "version": "1.0.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/live_id/id_macros/Cargo.toml",
+        "manifest_sha256": "995127b5c32aa26e77a5791c6bb230256ae4811a35dafe79f84e2239dd4903d3",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "proc-macro"
+        ]
+      },
+      {
+        "name": "makepad-live-reload-core",
+        "version": "0.1.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/live_reload_core/Cargo.toml",
+        "manifest_sha256": "4d7e63b655230fe64220773f3230936913e372d506c44b7d2c1d32497c09c68e",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-math",
+        "version": "1.0.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/math/Cargo.toml",
+        "manifest_sha256": "7b561f0279873a0a4b49dd9a43bab7b000fd3e49e120ceb56f2b53fdf95a10b8",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-micro-proc-macro",
+        "version": "1.0.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/micro_proc_macro/Cargo.toml",
+        "manifest_sha256": "41bfc489d86a48518f5490bc62397675e491f9998bc67bd896aadf568f7f371c",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-micro-serde",
+        "version": "1.0.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/micro_serde/Cargo.toml",
+        "manifest_sha256": "c671ca35890fc5b5e5661cb57e2251c7cea473d29fdf244a6d349afd4fd14e5c",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-micro-serde-derive",
+        "version": "1.0.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/micro_serde/derive/Cargo.toml",
+        "manifest_sha256": "8f41fdf15007744e8b91fc7988bd86c5547a931d843b0bf6bd4caaf77c144c98",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "proc-macro"
+        ]
+      },
+      {
+        "name": "makepad-network",
+        "version": "1.0.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/platform/network/Cargo.toml",
+        "manifest_sha256": "0d1621ac8754423f0df90acd1f7abc1cd62279b0a8b0183361b37408b29b1148",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-platform",
+        "version": "2.0.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/platform/Cargo.toml",
+        "manifest_sha256": "61debb771730d3eaec64ea8cb27b4cdaf45c12f62360f8f7b85eae0fe20f603e",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "build",
+          "lib",
+          "run"
+        ]
+      },
+      {
+        "name": "makepad-platform-video",
+        "version": "1.0.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/platform/video/Cargo.toml",
+        "manifest_sha256": "c103703141ed9b189c6166d83bd823a76ed38b1856bd22e434c85afa0430bea6",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-regex",
+        "version": "0.1.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/regex/Cargo.toml",
+        "manifest_sha256": "7862d1f6287634c4687c36d54d3798a0037ed2f53c15109331ffbc8e89538070",
+        "license": "Makepad root MIT for Makepad-authored code; see derivative notices",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-script",
+        "version": "1.0.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/platform/script/Cargo.toml",
+        "manifest_sha256": "fdf2534ebbdaf5b07acc60c2d67053859949a519bda09446d13aff8244bd151b",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-script-derive",
+        "version": "1.0.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/platform/script/derive/Cargo.toml",
+        "manifest_sha256": "186e3c1e22135318642b4ff392fcb67a6e825795471d3be49e4bfea9d6ab3a2d",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "proc-macro"
+        ]
+      },
+      {
+        "name": "makepad-script-std",
+        "version": "1.0.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/platform/script/std/Cargo.toml",
+        "manifest_sha256": "302cfd6b878ba63211b151409e0935ac95a35e8682dbaa49260a1e1794484c0e",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-shared-bytes",
+        "version": "1.0.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/shared_bytes/Cargo.toml",
+        "manifest_sha256": "d52b0415f2d8de755a05c0635c5ed436f655ece60184c0f87a019bb97693bdda",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-stitch",
+        "version": "0.1.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/stitch/Cargo.toml",
+        "manifest_sha256": "6ceb7efc4eed1fa6b5b8c3da35778659605697085448e141a3e8fe97b32fe842",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [
+          "c3a09c82fcbcd79b-LICENSE"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-studio-protocol",
+        "version": "0.1.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/platform/studio/Cargo.toml",
+        "manifest_sha256": "6a4b57f139e3b1ca7b5bd3492a3f85ac351788d87fd60e0e19164e6593169e55",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-svg",
+        "version": "1.0.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/svg/Cargo.toml",
+        "manifest_sha256": "cac0a462035e000ce11998a8436e5612d9fcc11aae4d664edbae3b6c06507e94",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-tsdf",
+        "version": "0.1.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/tsdf/Cargo.toml",
+        "manifest_sha256": "b0a6d12bc783720afa6a1cc7a38b8b216228b0502015be32b8fff3a2ee58e6f3",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-webp",
+        "version": "0.2.4",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/webp/Cargo.toml",
+        "manifest_sha256": "03f0740e57bca71c4ebd76a89f529184fbec967fe78369739510dd3bb3a07b70",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-widgets",
+        "version": "2.0.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/widgets/Cargo.toml",
+        "manifest_sha256": "f283a0c943e9efa220171b0fd6edb9ee0116993717246da1d03ac26ff0515cce",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "build",
+          "lib",
+          "run"
+        ]
+      },
+      {
+        "name": "makepad-widgets-core",
+        "version": "2.0.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/widgets/core/Cargo.toml",
+        "manifest_sha256": "0cca2147fff02be93ada76599ce5ddec78ff0344a1629bc4aa13bdce65c9f0b2",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-zune-bmp",
+        "version": "0.5.2",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/zune/zune-bmp/Cargo.toml",
+        "manifest_sha256": "a5d11ac73145077f1cbb2377e493a312a6812dadcb1ed1137cf67e5cc595da20",
+        "license": "MIT OR Apache-2.0 OR Zlib",
+        "original_notice_files": [
+          "126cdd7ff1d42abd-LICENSE-MIT",
+          "1eb85fc97224598d-LICENSE-APACHE",
+          "46044e33e3199a72-LICENSE-ZLIB"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-zune-core",
+        "version": "0.5.1",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/zune/zune-core/Cargo.toml",
+        "manifest_sha256": "a17f6f209ee5550fb3efac53b9020631cc48669d905a6b652ee0ea8d9f2f9904",
+        "license": "MIT OR Apache-2.0 OR Zlib",
+        "original_notice_files": [
+          "126cdd7ff1d42abd-LICENSE-MIT",
+          "1eb85fc97224598d-LICENSE-APACHE",
+          "46044e33e3199a72-LICENSE-ZLIB"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-zune-inflate",
+        "version": "0.2.54",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/zune/zune-inflate/Cargo.toml",
+        "manifest_sha256": "92eb20245cf679e8821b61f8a7be926bbaafafef2dafaa8e2e43d2b8b64640cd",
+        "license": "MIT OR Apache-2.0 OR Zlib",
+        "original_notice_files": [
+          "126cdd7ff1d42abd-LICENSE-MIT",
+          "1eb85fc97224598d-LICENSE-APACHE",
+          "46044e33e3199a72-LICENSE-ZLIB"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-zune-jpeg",
+        "version": "0.5.15",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/zune/zune-jpeg/Cargo.toml",
+        "manifest_sha256": "da9971c688c93241a9ecdc71186f5657ad270eb61341272fc7a62ba052d077f6",
+        "license": "MIT OR Apache-2.0 OR Zlib",
+        "original_notice_files": [
+          "126cdd7ff1d42abd-LICENSE-MIT",
+          "1eb85fc97224598d-LICENSE-APACHE",
+          "46044e33e3199a72-LICENSE-ZLIB"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-zune-png",
+        "version": "0.5.2",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/zune/zune-png/Cargo.toml",
+        "manifest_sha256": "f73bf511e8d938cd7ed4b9480175161c8d1478b422df63cd5d1031584df8592b",
+        "license": "MIT OR Apache-2.0 OR Zlib",
+        "original_notice_files": [
+          "126cdd7ff1d42abd-LICENSE-MIT",
+          "1eb85fc97224598d-LICENSE-APACHE",
+          "46044e33e3199a72-LICENSE-ZLIB"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "makepad-zune-qoi",
+        "version": "0.5.2",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/zune/zune-qoi/Cargo.toml",
+        "manifest_sha256": "4c314b6bbe75406b58df7a6dcfe9b1612cb9636ad24aca132508c39177d752f3",
+        "license": "MIT OR Apache-2.0 OR Zlib",
+        "original_notice_files": [
+          "126cdd7ff1d42abd-LICENSE-MIT",
+          "1eb85fc97224598d-LICENSE-APACHE",
+          "46044e33e3199a72-LICENSE-ZLIB"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "mss-desktop",
+        "version": "0.1.0-preview.1",
+        "source": null,
+        "manifest": "mss/MSS_Desktop/Cargo.toml",
+        "manifest_sha256": "2fd4c220cfc0ea764b9d9c784a402100070fc26e4f1619cd773c16fe61fc3e3f",
+        "license": "MIT",
+        "original_notice_files": [],
+        "unit_kinds": [
+          "bin",
+          "lib"
+        ]
+      },
+      {
+        "name": "rustybuzz",
+        "version": "0.18.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/rustybuzz/Cargo.toml",
+        "manifest_sha256": "9b127ab5df4adf94fef51dc3b26292eb26926d0818f4875c7a5b4ff0ae649e25",
+        "license": "MIT",
+        "original_notice_files": [
+          "7d43d2ef1ce976c7-LICENSE"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "sdfer",
+        "version": "0.2.1",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/sdfer/Cargo.toml",
+        "manifest_sha256": "a4f438999374eb3d88f7a34121d99b1eeaad00a435cd89714cd30e3fe11a4f92",
+        "license": "MIT",
+        "original_notice_files": [
+          "36516aefdc84c5d5-LICENSE-MIT"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "simd-adler32",
+        "version": "0.3.9",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/simd-adler32/Cargo.toml",
+        "manifest_sha256": "f25b8c84e638b49f074161863a3b03324d89966d5aa0ab39f7f5436d85b5ba7f",
+        "license": "MIT",
+        "original_notice_files": [
+          "1868ef930a006e3e-LICENSE.md"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "smallvec",
+        "version": "1.15.1",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/smallvec/Cargo.toml",
+        "manifest_sha256": "212c5d9b10c2f768b453c73262259804e5f047a507811f5282c90c65d6dfadb9",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [
+          "6ed527ca0be84b05-LICENSE-MIT",
+          "7cfd738c53d61c79-LICENSE-APACHE"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "ttf-parser",
+        "version": "0.24.1",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/ttf-parser/Cargo.toml",
+        "manifest_sha256": "b6c440cb2257a617ebd529ba75978d773fc23b5d67a56c2d52fed99544d4558a",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [
+          "7cfd738c53d61c79-LICENSE-APACHE",
+          "86e2dbfdbd961f5f-LICENSE-MIT"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "unicode-bidi",
+        "version": "0.3.18",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/unicode/unicode-bidi/Cargo.toml",
+        "manifest_sha256": "fffb713e0b187b849061717b7c2a474a68a721b34b376978116450f437080a2b",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [
+          "01fd0307eb78672b-COPYRIGHT",
+          "7cfd738c53d61c79-LICENSE-APACHE",
+          "fceec72e827b021c-LICENSE-MIT"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "unicode-bidi-mirroring",
+        "version": "0.3.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/unicode/unicode-bidi-mirroring/Cargo.toml",
+        "manifest_sha256": "49705ecc45d055eadf0ad4b1a96f27957110ebdddecbc9b897bef5f4fa3562f4",
+        "license": "MIT/Apache-2.0",
+        "original_notice_files": [
+          "36c4ec1b07417c44-LICENSE-MIT",
+          "7cfd738c53d61c79-LICENSE-APACHE"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "unicode-ccc",
+        "version": "0.3.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/unicode/unicode-ccc/Cargo.toml",
+        "manifest_sha256": "eead44c497b094d77255792a44fa0d3de1fa632245f988c18b7617658f772d8a",
+        "license": "MIT/Apache-2.0",
+        "original_notice_files": [
+          "36c4ec1b07417c44-LICENSE-MIT",
+          "7cfd738c53d61c79-LICENSE-APACHE"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "unicode-properties",
+        "version": "0.1.4",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/unicode/unicode-properties/Cargo.toml",
+        "manifest_sha256": "5cf90668bbde227e1f5c1dc49c3596a033e2210374721dad427c4a8afdd8a910",
+        "license": "MIT/Apache-2.0",
+        "original_notice_files": [
+          "7cfd738c53d61c79-LICENSE-APACHE",
+          "d32730cc6d3271bc-COPYRIGHT",
+          "fceec72e827b021c-LICENSE-MIT"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "unicode-script",
+        "version": "0.5.8",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/unicode/unicode-script/Cargo.toml",
+        "manifest_sha256": "605698acaf4edff3b9c95acf361ea4221c75f1f5c4ed4fae78018dad5b2eb7b2",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [
+          "7ad3ea8ca3caf894-LICENSE-MIT",
+          "7cbb56d1b5d83d73-LICENSE-APACHE"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "unicode-segmentation",
+        "version": "1.12.0",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/unicode/unicode-segmentation/Cargo.toml",
+        "manifest_sha256": "109ca9e22163372da8c64b148066d203f80e1f3b89c0f8b699dbb0d790fe265f",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [
+          "7cfd738c53d61c79-LICENSE-APACHE",
+          "d32730cc6d3271bc-COPYRIGHT",
+          "fceec72e827b021c-LICENSE-MIT"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "weezl",
+        "version": "0.1.12",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/gif/weezl/Cargo.toml",
+        "manifest_sha256": "9d2729d95ec2a72818f07a435b9249eb49bd839e4450ec9163fa9378f1ed610f",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [
+          "b8601fc79bdf8d80-LICENSE-APACHE",
+          "e20912a254acfd1d-LICENSE-MIT"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "windows",
+        "version": "0.62.2",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/windows/windows-rs/Cargo.toml",
+        "manifest_sha256": "9b53f1d841a3a67b92a044a54407651300da126885a8585d45902c5615920d44",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [
+          "9906940f61b1f0b5-license-mit",
+          "9a7110fc2d2f9640-license-apache-2.0"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "windows-collections",
+        "version": "0.3.2",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/windows/windows-collections/Cargo.toml",
+        "manifest_sha256": "68c26fdbf27b113347ad38a96aad99940c5451cbaedbe4ab3b00a2a86a66148c",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [
+          "9906940f61b1f0b5-license-mit",
+          "9a7110fc2d2f9640-license-apache-2.0"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "windows-core",
+        "version": "0.62.2",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/windows/windows-core/Cargo.toml",
+        "manifest_sha256": "36928cecd109df7c25ff54027a982b08bc660ad35b7f07a616ac8ee4e8605203",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [
+          "9906940f61b1f0b5-license-mit",
+          "9a7110fc2d2f9640-license-apache-2.0"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "windows-future",
+        "version": "0.3.2",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/windows/windows-future/Cargo.toml",
+        "manifest_sha256": "b443dbb064d884c1e5d790ef170db176af598ec0c5e3666d931405e9eb8474c2",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [
+          "9906940f61b1f0b5-license-mit",
+          "9a7110fc2d2f9640-license-apache-2.0"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "windows-link",
+        "version": "0.2.1",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/windows/windows-link/Cargo.toml",
+        "manifest_sha256": "f2b2d31dee20035fb1151150bc136e4497c0310243179f01b5f60591a3ca7f95",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [
+          "9906940f61b1f0b5-license-mit",
+          "9a7110fc2d2f9640-license-apache-2.0"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "windows-result",
+        "version": "0.4.1",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/windows/windows-result/Cargo.toml",
+        "manifest_sha256": "bba84c418878588753a99154c3eca3e1319a57ee43bd952dcf848ae77c82ab95",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [
+          "9906940f61b1f0b5-license-mit",
+          "9a7110fc2d2f9640-license-apache-2.0"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      },
+      {
+        "name": "windows-strings",
+        "version": "0.5.1",
+        "source": "git+https://github.com/makepad/makepad?rev=130be1d0318adcf69453d925342607466353152c#130be1d0318adcf69453d925342607466353152c",
+        "manifest": "makepad/libs/windows/windows-strings/Cargo.toml",
+        "manifest_sha256": "5a153eb32c06c7596ee747dd151e63b038fe5475e80a771ce7dfa1285bc2783d",
+        "license": "MIT OR Apache-2.0",
+        "original_notice_files": [
+          "9906940f61b1f0b5-license-mit",
+          "9a7110fc2d2f9640-license-apache-2.0"
+        ],
+        "unit_kinds": [
+          "lib"
+        ]
+      }
+    ]
+  }
+}
