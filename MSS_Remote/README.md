@@ -1,15 +1,7 @@
 # MSS_Remote
 
-## Responsibility
+**SCAFFOLD** in `0.1.0-preview.1`. The workspace builds [mss-remote](Cargo.toml). Its [library](src/lib.rs) reports `NotImplemented` and declares no Cargo dependencies.
 
-Deliver a command to exactly one session's Makepad application and verify that the reply belongs to the expected app, session generation, and process identity.
+App control uses the pinned official Makepad `work` Remote client. The [launcher](../MSS_MCP/tools/Start-MakepadMcp.ps1) binds discovery and readiness to the process it started. The [router](../MSS_MCP/tools/mss_universal.py) addresses operations by App ID and window, and checks permissions and capabilities. On the verified Windows path the Remote client speaks stdio MCP to the router and uses token-authenticated loopback to the guest.
 
-## Planned boundary
-
-MSS_Remote is an adapter around an application-owned control channel. It should validate the launched process identity and discovered endpoint, correlate requests, bound payloads and timeouts, classify pre-dispatch refusal versus uncertain outcome, and require independent postcondition observation for mutations. Session policy and business logic stay in MSS_API/Core.
-
-Official Makepad --remote is a concrete source-inspected integration candidate. The inspected implementation is app-local and routes commands through the app event loop. The public source does not prove per-agent authentication, Toolkit operation parity, or that every command can be addressed without desktop-global side effects. The tools-2 adapter remains an experiment.
-
-## Current state
-
-No command transport, security gateway, semantic parity, retry policy, or live app proof is implemented. All are NOT_VERIFIED. A physical input fallback must not silently replace a semantic operation.
+The [SKLT declaration](mss_remote.sklt) reserves a future Rust integration boundary. See [source and protocol compatibility](../doc/compatibility.md).

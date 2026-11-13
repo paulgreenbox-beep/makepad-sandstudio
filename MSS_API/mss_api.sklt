@@ -7,7 +7,7 @@ object_id:
 kind:
     component
 responsibility:
-    typed tool boundary
+    SCAFFOLD Rust tool boundary
 level:
     L1
 git_scope:
@@ -19,9 +19,9 @@ storage_state:
 retention:
     PERMANENT
 inputs:
-    approved session data and typed requests
+    future typed tool requests
 outputs:
-    scoped outcomes or source declarations
+    Rust status marker. Active schemas and permissions are in the MSS_MCP Python router
 depends_on:
     mss.core
 effects:

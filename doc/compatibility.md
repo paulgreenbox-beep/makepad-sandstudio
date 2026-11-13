@@ -1,62 +1,26 @@
-# Compatibility and source research
+# Makepad and runtime compatibility
 
-## Source-only connector follow-up
+## Windows preview pins
 
-The Python connector uses only the Python standard library, native Windows APIs
-and PowerShell 7.4+. It wraps separately operator-pinned app/official Makepad
-Remote executables; this PR ships no binaries, Makepad SDK or application
-profile pins. No declared Cargo dependency, lockfile or research baseline below
-changes. Local policy/stdio tests do not establish runtime compatibility with
-any Makepad revision. See [the bounded verification protocol](mss-cleanup-source-identity.md).
+| Role | Revision or prerequisite | Scope |
+| --- | --- | --- |
+| MSS source preview | `release/0.1.0-preview.1`, baseline `04ea3c52d5777adcbd9e36f0bf18572836d1d120` | Windows developer preview. [Source baseline](https://github.com/paulgreenbox-beep/makepad-sandstudio/tree/04ea3c52d5777adcbd9e36f0bf18572836d1d120) |
+| Desktop Makepad | `130be1d0318adcf69453d925342607466353152c` | Cargo pin for `makepad-widgets`; `2.0.0` is the crate version. [Manifest](../MSS_Desktop/Cargo.toml) · [Lockfile](../Cargo.lock) |
+| Tested external RudraOffice guest and Remote | Makepad `work` revision `2271c0eb350cedd497c84373f17ad2b0b662cb72`, exact per-EXE SHA-256 in test evidence | External guest admission. Other builds, including AI CAD and optional workers, have separate profile/configuration contracts and coverage. [Native launcher](../MSS_MCP/tools/Start-MakepadMcp.ps1) · [Testing](testing.md) |
+| Desktop build | Native Windows x64, MSVC, Windows SDK, tested Rust `1.97.1` | Build tooling. [Build instructions](../BUILDING.md) |
+| Router and launcher | External CPython `3.12+`, PowerShell `7.4+` | Router uses the Python standard library. PowerShell and launcher are pinned in the profile catalog. The local MSI prerequisite candidate was exercised with standalone CPython `3.14.10` and PowerShell `7.6.10`. [Configuration](../CONFIGURATION.md) |
+| Recording handoff | Operator-installed, authenticated Codex CLI | Optional. The dev delivery test used `0.167.0-alpha.4.1`; compatibility with other versions is unverified. [Handoff implementation](../MSS_Desktop/src/codex_handoff.rs) |
 
-## How to read this file
+Desktop's Cargo pin and a guest's declared Makepad revision are separate. Match the native Remote executable to the guest that produced its discovery and protocol. A branch name, a crate version or a successful compile does not establish guest protocol or capability compatibility.
 
-The commit SHAs below identify source snapshots inspected for architecture on **2026-10-30**. They are not Cargo dependencies, do not imply functional compatibility, and must be refreshed before implementation. NOT_VERIFIED means there is no accepted cross-version proof.
+## Native guest transport
 
-## Source revisions
+The active Windows launch starts the admitted guest with `--remote` and hidden mode. The guest provides per-session discovery with a loopback TCP address and token. MSS validates the receipt and discovery, calls the official `makepad-remote app <pid> status`, then uses the official client in `makepad-remote mcp <pid>` stdio mode. A directly attached participant uses the same native app and has a separate client. [Launcher](../MSS_MCP/tools/Start-MakepadMcp.ps1) · [Router](../MSS_MCP/tools/mss_universal.py) · [Pinned Makepad Remote source](https://github.com/makepad/makepad/blob/2271c0eb350cedd497c84373f17ad2b0b662cb72/libs/remote/src/carrier/unix.rs)
 
-| Project | Branch/revision inspected | Relevant source evidence | Result |
-|---|---|---|---|
-| Official Makepad | dev at 130be1d0318adcf69453d925342607466353152c | [Cx](https://github.com/makepad/makepad/blob/130be1d0318adcf69453d925342607466353152c/platform/src/cx.rs), [app Remote](https://github.com/makepad/makepad/blob/130be1d0318adcf69453d925342607466353152c/platform/src/remote.rs), [Remote activity](https://github.com/makepad/makepad/blob/130be1d0318adcf69453d925342607466353152c/platform/src/remote_activity.rs), [hosted relay](https://github.com/makepad/makepad/blob/130be1d0318adcf69453d925342607466353152c/platform/src/hosted_relay.rs), [hosted Vulkan](https://github.com/makepad/makepad/blob/130be1d0318adcf69453d925342607466353152c/platform/src/os/linux/hosted_gpu.rs), [HostedView](https://github.com/makepad/makepad/blob/130be1d0318adcf69453d925342607466353152c/widgets/core/src/hosted_view.rs), [Remote guide](https://github.com/makepad/makepad/blob/130be1d0318adcf69453d925342607466353152c/docs/agents/app-remote.md) | Source inspected; MSS integration and compatibility NOT_VERIFIED |
-| Rust Makepad Toolkit | main at 0b01942f1a7d1c276f130c9db03146cb96c1718a | [workspace manifest](https://github.com/paulgreenbox-beep/rust-makepad-toolkit/blob/0b01942f1a7d1c276f130c9db03146cb96c1718a/Cargo.toml), [public script model](https://github.com/paulgreenbox-beep/rust-makepad-toolkit/blob/0b01942f1a7d1c276f130c9db03146cb96c1718a/prototypes/ai-ui-test-tool-auto-probe/src/script.rs), [runner](https://github.com/paulgreenbox-beep/rust-makepad-toolkit/blob/0b01942f1a7d1c276f130c9db03146cb96c1718a/prototypes/ai-ui-test-tool-auto-probe/src/runner.rs), [operations](https://github.com/paulgreenbox-beep/rust-makepad-toolkit/blob/0b01942f1a7d1c276f130c9db03146cb96c1718a/prototypes/ai-ui-test-tool-auto-probe/operations.json), [reliability](https://github.com/paulgreenbox-beep/rust-makepad-toolkit/blob/0b01942f1a7d1c276f130c9db03146cb96c1718a/prototypes/ai-ui-test-tool-auto-probe/RELIABILITY.md), [Scheduler model](https://github.com/paulgreenbox-beep/rust-makepad-toolkit/blob/0b01942f1a7d1c276f130c9db03146cb96c1718a/prototypes/ai-ui-test-tool-auto-probe/scheduler/src/model.rs) | Acceptance baseline target; exact local Makepad source pin NOT_VERIFIED |
-| rust-makepad-tools-2 | main at b521a6c475348fb73494abdbe6adaf3c2c43320d | [workspace metadata](https://github.com/paulgreenbox-beep/rust-makepad-tools-2/blob/b521a6c475348fb73494abdbe6adaf3c2c43320d/Cargo.toml), [Remote adapter](https://github.com/paulgreenbox-beep/rust-makepad-tools-2/blob/b521a6c475348fb73494abdbe6adaf3c2c43320d/crates/toolkit-windows-automation/src/makepad_remote/mod.rs), [protocol guards](https://github.com/paulgreenbox-beep/rust-makepad-tools-2/blob/b521a6c475348fb73494abdbe6adaf3c2c43320d/crates/toolkit-windows-automation/src/makepad_remote/protocol.rs), [semantic prototype](https://github.com/paulgreenbox-beep/rust-makepad-tools-2/blob/b521a6c475348fb73494abdbe6adaf3c2c43320d/crates/toolkit-windows-automation/src/makepad_remote/semantic.rs), [desktop arbiter model](https://github.com/paulgreenbox-beep/rust-makepad-tools-2/blob/b521a6c475348fb73494abdbe6adaf3c2c43320d/crates/toolkit-windows-automation/src/desktop_arbiter/model.rs) | Experimental source only; not verified as production or parity |
+Earlier Makepad HTTP research and any Desktop-side test inspection endpoint describe different surfaces. The old HTTP guest path is historical guidance. Native capture sends guest-rendered PNGs for decoding by Desktop. Hosted child surfaces and Linux GPU sharing remain separate research paths. [Historical source research](history/initial-architecture/compatibility.md)
 
-## Makepad dev findings
+## Evidence and change policy
 
-At the inspected revision, platform/src/remote.rs describes an app-embedded --remote localhost HTTP control surface. Its request threads enqueue commands for the Makepad event loop; input is dispatched through the app's Studio-message event path, and screenshot grabs use app renderer readback before PNG encoding. The control queue is polled from the Cx event-loop boundary. This makes it a candidate for app-addressed control and capture.
-
-Cx owns a per-instance RemoteActivity ledger. Native input advances a user sequence and tracks a quiet period/held state; a scoped flag distinguishes synchronous Remote-injected dispatch from native input. The Remote can use this activity to refuse or report interference. This is useful per-app conflict detection, not caller authentication, an inter-process owner check, or an OS isolation boundary.
-
-This is not by itself a secure MSS multi-agent channel. The inspected source does not establish per-agent authorization, a session-owner check, a stable app-side semantic API equivalent to every Toolkit operation, or independent postcondition proof. A successful remote reply is not proof that a requested state was reached.
-
-The hosted paths are distinct:
-
-- widgets/core/src/hosted_view.rs selects full or tile presentation of one resident app. It routes input only to the active face while keeping its resident views alive; it does not host multiple independent application processes.
-- platform/src/os/linux/hosted_gpu.rs handles Linux hosted Vulkan swapchain requests and file-descriptor transfer. This is platform-specific descriptor plumbing, not a generic MSS frame API or proof of a cross-platform image stream.
-- platform/src/hosted_relay.rs relays selected child operations through a host. It is not an MSS session/agent authorization contract.
-
-## Rust Makepad Toolkit findings
-
-The inspected Toolkit root workspace uses Rust edition 2024 and declares makepad-widgets as a path dependency at .deps/makepad/widgets, with version 2.0.0. The manifest does not provide a Git revision for that local path. Therefore the exact Makepad commit used by the inspected Toolkit checkout cannot be established from that public manifest and is NOT_VERIFIED; do not substitute an assumed SHA.
-
-The source includes a public .aiui.json script model and schema, operation catalog, generic transport-based runner, reliability layer, Windows UI Automation and physical-input paths, Scheduler workers/leases/resource limits/retry policies, verification profiles, and structured evidence. The Toolkit operation catalog marks set_value as not requiring physical input, while input, click, and focus are physical-input operations. MSS must preserve these distinctions; a set_value implementation cannot be silently substituted for input or click.
-
-The Toolkit's default Scheduler resource pool gives the interactive Windows desktop capacity one and marks physical or interactive-desktop jobs as requiring that shared resource. This existing behavior is part of the baseline contract; MSS must not pretend it already provides parallel independent desktop input.
-
-## rust-makepad-tools-2 findings
-
-The inspected tools-2 root workspace metadata records a Makepad revision of 71c9ddcbb9c01dd208f99621fdd71024a5d35c65. Its Remote adapter identifies itself as experimental and targets that pinned source. The adapter module states that it contains no Script runner, HTTP server, or Scheduler; process and transport ownership remain outside it.
-
-The protocol code explicitly treats a remote reply as insufficient proof of effect and notes that the pinned protocol lacks keyboard focus and layout generation. The semantic contract is source-side composition only: its module states that it installs no app IPC/route and that native platform owners are unsupported until an authenticated producer and fixture policy exist. The native PNG inspector has bounded parsing and blank-image checks, but those tests do not prove live app capture. The desktop arbiter model is deterministic policy logic; its source says an arbiter is not a lock on human or foreign application input and requires a trusted native owner plus independent safe-point observations.
-
-These mechanisms are useful research, not verified SandStudio features.
-
-## Version and dependency policy for MSS
-
-- The published workspace baseline before this documentation integration is commit b4556baae7b628e00322bb20bb9cc1d8221032fc. It has seven workspace members. Of their manifests, only [MSS_Desktop/Cargo.toml at that commit](https://github.com/paulgreenbox-beep/makepad-sandstudio/blob/b4556baae7b628e00322bb20bb9cc1d8221032fc/MSS_Desktop/Cargo.toml) declares an external dependency: makepad-widgets from https://github.com/makepad/makepad at exact revision 130be1d0318adcf69453d925342607466353152c. The manifest's version 2.0.0 is not the revision pin.
-- The other six package manifests declare no direct dependencies. No Makepad SDK source is copied or vendored into MSS.
-- The Makepad dev SHA is also the direct MSS_Desktop dependency pin; the Toolkit and tools-2 SHAs are research baselines, not MSS dependencies.
-- The tools-2 Remote prototype's Makepad source target (71c9dd...) differs from inspected Makepad dev (130be1...). Cross-version compatibility is NOT_VERIFIED.
-- The Toolkit local Makepad path has no recoverable exact commit in its public workspace manifest. Compatibility with either inspected Makepad revision is NOT_VERIFIED.
-- Before adding a Makepad crate, record repository, exact commit SHA, license, feature flags, platform support, and an isolated compatibility test. Before upgrading, run the full unchanged Toolkit and MSS compatibility suites.
-- A Makepad branch name, crate version, source tree resemblance, compile, or passing unrelated unit test is not a compatibility result.
+- Record source revision and app/Remote executable hashes when admitting a new guest. Verify discovery and identity, the advertised tool set, addressed input/resize where enabled, a real native frame and owned closure on that exact build.
+- Record and independently test changes to pinned dependencies, declared features, supported operating systems, package assets or resource lookup. The original RC2 payload omits its font files; same-host runtime verification does not establish clean-machine portability. [Limitations](../KNOWN_LIMITATIONS.md)
+- The earlier Toolkit, Script API and Scheduler research remains reference material. Current MSS verification uses its own regressions and applicable official Makepad UI tests. Full Toolkit parity remains unverified. [Current checks](testing.md) · [Historical test plan](history/initial-architecture/testing.md)

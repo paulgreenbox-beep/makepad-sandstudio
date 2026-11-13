@@ -7,7 +7,7 @@ object_id:
 kind:
     component
 responsibility:
-    addressed application input
+    SCAFFOLD Rust application transport boundary
 level:
     L1
 git_scope:
@@ -19,9 +19,9 @@ storage_state:
 retention:
     PERMANENT
 inputs:
-    approved session data and typed requests
+    future addressed application requests
 outputs:
-    scoped outcomes or source declarations
+    Rust status marker. Current routing uses MSS_MCP and official Makepad Remote
 depends_on:
     mss.core
     mss.api

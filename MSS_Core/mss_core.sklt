@@ -7,7 +7,7 @@ object_id:
 kind:
     component
 responsibility:
-    session supervision
+    SCAFFOLD Rust session supervision
 level:
     L0
 git_scope:
@@ -19,9 +19,9 @@ storage_state:
 retention:
     PERMANENT
 inputs:
-    approved session data and typed requests
+    future typed session and lifecycle requests
 outputs:
-    scoped outcomes or source declarations
+    Rust status marker. Current process ownership is in MSS_MCP
 depends_on:
 
 effects:

@@ -7,7 +7,7 @@ object_id:
 kind:
     component
 responsibility:
-    native Makepad desktop viewer
+    IMPLEMENTED native Human View executable. SCAFFOLD library target
 level:
     L2
 git_scope:
@@ -19,9 +19,9 @@ storage_state:
 retention:
     PERMANENT
 inputs:
-    approved session data and typed requests
+    user-selected App ID, MCP observations, preview input and explicit export selections
 outputs:
-    scoped outcomes or source declarations
+    selected native frame, recording evidence and optional Codex CLI delivery receipt
 depends_on:
     mss.api
     mss.render

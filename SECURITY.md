@@ -1,58 +1,25 @@
 # Security model
 
-## Status
+MSS `0.1.0-preview.1` is a trusted-local Windows developer preview. The implemented policy lives in the Python router, its local sharing store and the PowerShell launcher. It is an application-level boundary for admitted guests running under the local Windows user. OS sandboxing, protection against hostile same-user processes and production dispatcher qualification remain `NOT_VERIFIED`. [Architecture](doc/architecture.md) · [Limits](KNOWN_LIMITATIONS.md)
 
-The source-only Python MCP connector is restricted to an operator-admitted,
-trusted-local development setup. Its receipt files and shared SQLite index are
-not signed attestations or an OS-enforced boundary against same-user processes.
-Its frozen startup hashes measure five Python modules, not the interpreter,
-launcher, app or full Git tree. Unknown legacy cleanup stays pending; no private
-migration allowlist is distributed. See [scope and limitations](doc/mss-cleanup-source-identity.md).
-The following planned security model is not production qualification.
+## Admission and identity
 
-This document states design requirements, not implemented protections. MSS has no session broker, remote gateway, permission enforcement, file broker, process supervisor, or OS sandbox yet. All such controls are NOT_VERIFIED.
+- Operators select a local profile, trusted PowerShell, launcher and the guest/official Remote executable pair. The router verifies profile/build policy, hashes and optional launch descriptors. Paths for controlled files must be local, canonical and non-reparse. The launcher rechecks and opens pinned executable files before it starts them. Agent tool arguments do not grant arbitrary executable or shell authority. [Configuration](CONFIGURATION.md) · [Profile admission](MSS_MCP/tools/mss_profiles.py) · [Launcher](MSS_MCP/tools/Start-MakepadMcp.ps1)
+- An opaque App ID resolves to an owned app or explicit attachment. MSS binds this ID to the owner connection, launcher receipt/session, Windows session, PID, birth identity and executable. App commands then select the exact window and current semantic node where needed. A PID, title, port or window identifier alone grants no ownership. [Router](MSS_MCP/tools/mss_universal.py) · [Process identity](MSS_MCP/tools/mss_process.py)
+- The owner keeps the app private or grants local `read` or `control`. Control remains subject to profile restrictions, native capabilities and current geometry/activity checks. The owner controls sharing and closure. Participants detach their own connections and cannot take over an owner-lost app. Revocation or detach cancels queued work as applicable. The local SQLite store is trusted same-user state, not a signed attestation. [Sharing](MSS_MCP/tools/mss_shared.py)
 
-## Trust boundaries
+## Addressed commands and lifecycle
 
-- AI-agent requests, test scripts, application files, and app telemetry are untrusted input.
-- MSS_API is planned as the policy boundary. MSS_Core is planned to own session identity and only the processes it starts.
-- Makepad applications and their plugins run with the operating-system permissions of their process identity. A separate process per session prevents shared process memory; it does not grant a separate security principal or restrict that process's filesystem and network access.
-- The Makepad Desktop prototype and structural SKLT files grant no authority and provide no security enforcement.
-- MCP clients must not receive operating-system handles, raw unrestricted process controls, or authority to select another agent's session.
-- Toolkit and Makepad source repositories are research inputs, not components whose source is copied into MSS.
+Native Windows guests use their own Makepad Remote loopback endpoint and a per-session discovery token. MSS uses the official Remote client over local stdio. Keep discovery files and tokens private. The guest token and an app-level permission check do not restrict other programs running with the same OS identity. Do not expose local endpoints to a network or bypass the router's policy. Independent processes and Makepad addressed input do not restrict guest filesystem, network or credential access.
 
-## Session identity and permissions
+MSS targets app/window-local input. Do not use foreground desktop focus, global keyboard/mouse injection or an unverified fallback. Human View input is bound to the selected drawn geometry. An ACK confirms dispatch only. Record independent state and health evidence to claim an effect. After transport loss or `OUTCOME_UNKNOWN`, preserve the receipt and never automatically replay a mutation. [Verification contracts](doc/testing.md)
 
-Every request must resolve to an existing session and its authorized agent. A session binding is planned to include a random session ID, owner/agent ID, generation, app process ID and birth identity, canonical executable path and digest, launch record, and a session-scoped channel identity. A PID, window title, port number, widget ID, or agent-supplied session alias alone is insufficient.
+Cleanup is owner-only and uses verified retained process identity. It attempts official Remote graceful exit and records observed process exit. Never terminate by process name or guessed PID. Uncertain exit, identity or legacy provenance remains `CLEANUP_PENDING`; use receipt reconciliation that does not signal the process. Crash-surviving containment, complete descendant cleanup and OS resource confinement remain unverified. [Cleanup scope](doc/mss-cleanup-source-identity.md)
 
-Permissions should be capability-based and narrow: inspect, read, invoke, set value, input, capture, run a test, access an artifact directory, and close. The app must declare which semantic operations it supports. A caller must not gain a capability by supplying its own widget tree, window handle, process identity, or evidence path.
+## Artifacts, recording and Codex
 
-## Input channel isolation
+Keep user files, live profile pins, discovery, logs, screenshots and internal paths out of public issues and commits. Preserve per-app artifact boundaries. Retain evidence with timestamps, source/process identity and file hashes. Treat local receipts and router startup hashes as scoped diagnostics. The frozen manifest covers the router's five Python modules, not interpreter provenance, full Git state or a signed attestation. [Startup identity](doc/mss-cleanup-source-identity.md)
 
-Commands must carry a session binding and be delivered only to the app process launched for that session. The app must independently check the target and return an observable result. MSS must not inject into the user's foreground desktop or use desktop-global keyboard/mouse input as a fallback.
+Human View recording can contain sensitive text, trees and PNGs. Review the selected export and send only with explicit user approval. The handoff revalidates its manifest and uses the installed authenticated Codex CLI for bounded read-only analysis. The handoff invocation disables app MCP, shell and web access and does not forward `OPENAI_API_KEY`. Record the response and preserve uncertainty without retry. The same-user Codex execution still relies on its installed runtime and account. [Recording](MSS_Desktop/src/recording.rs) · [Handoff](MSS_Desktop/src/codex_handoff.rs)
 
-The inspected Makepad --remote implementation is a loopback HTTP surface in the application process. The inspected source and documentation do not establish per-agent authentication or an OS-enforced caller boundary for that endpoint. A random local port is not authentication. Until an authenticated gateway or OS-protected channel is proven, enabling this endpoint is only acceptable for a trusted, single-user development setup; multi-agent security remains NOT_VERIFIED.
-
-**Makepad input isolation is not full OS isolation.** Separate app processes do not stop same-user processes from accessing files, network resources, credentials, or other OS objects allowed to that user. MSS must not claim a sandbox based on addressed input or separate processes.
-
-## Files and evidence
-
-- Resolve every path under a session-owned, configured project or artifact root. Reject traversal, unexpected reparse points/symlinks, device paths, and writes outside that root.
-- Do not accept arbitrary executable paths, shell text, environment variables, or output directories from an agent without policy validation.
-- Keep per-session logs, screenshots, reports, and temporary files distinct. Attach source/process/session identity, timestamps, content hashes, and generation IDs to evidence.
-- Redact credentials and declared secrets before reports or MCP responses are persisted or returned.
-- Preserve incomplete evidence and cleanup failures. Never label a missing or corrupt evidence bundle as a successful test.
-
-## Network limits
-
-The initial design is local-only. Do not expose app Remote ports or MSS_API on a network interface. Remote MCP/API access requires a separate design review for authentication, authorization, transport protection, origin policy, replay handling, rate limits, and audit logs. Applications may initiate their own network requests; MSS must not infer that local control limits app network access.
-
-## Process and resource cleanup
-
-Only the recorded owning session may request cleanup. Before signalling a process, re-check its PID, birth identity, executable identity, and ownership generation. Never kill by process name or port. Wait for normal exit, verify descendants/resources, and report anything still owned or uncertain. If ownership cannot be confirmed, preserve it as unresolved/quarantined and require explicit recovery.
-
-On Windows, a Job Object may help control the lifetime of an MSS-owned process tree; it does not provide filesystem or network isolation. Forced containment is not a normal exit and must be reported separately. Physical desktop operations require a separate safety policy; if a reliable background equivalent is unavailable, return an explicit unsupported outcome.
-
-No Docker or other container, WSL/WSLC, Hyper-V, or virtual machine is part of the proposed execution architecture. A future OS-level isolation feature would require its own threat model and acceptance evidence; it must not be inferred from this design.
-
-Report security issues privately to the repository owner. Do not put credentials or private session traces in public issues.
+Report security issues privately to the repository owner. Provide the source revision and a minimal sanitized reproduction.

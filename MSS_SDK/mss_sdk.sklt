@@ -7,7 +7,7 @@ object_id:
 kind:
     component
 responsibility:
-    application integration contract
+    SCAFFOLD Rust application integration contract
 level:
     L1
 git_scope:
@@ -19,9 +19,9 @@ storage_state:
 retention:
     PERMANENT
 inputs:
-    approved session data and typed requests
+    future typed application capabilities
 outputs:
-    scoped outcomes or source declarations
+    Rust status marker. Current guests use Makepad Remote and their app services
 depends_on:
     mss.api
 effects:

@@ -1,5 +1,7 @@
 # Explicit user-sequence preflight
 
+> **Historical verification record.** The source-only scope and PR state below describe the original check. See the [current preview architecture](architecture.md) and [current verification commands](../TESTING.md).
+
 ## Scope and dependency
 
 This source-only change is stacked on Draft PR #15 at

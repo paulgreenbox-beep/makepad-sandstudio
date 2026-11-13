@@ -7,7 +7,7 @@ object_id:
 kind:
     component
 responsibility:
-    MCP protocol integration
+    IMPLEMENTED local Python stdio MCP connector and PowerShell launcher. SCAFFOLD Rust library
 level:
     L2
 git_scope:
@@ -19,9 +19,9 @@ storage_state:
 retention:
     PERMANENT
 inputs:
-    approved session data and typed requests
+    MCP requests, operator-admitted profiles and owned launch receipts
 outputs:
-    scoped outcomes or source declarations
+    scoped application results, native PNG metadata and cleanup outcomes
 depends_on:
     mss.api
 effects:
