@@ -7,7 +7,7 @@ object_id:
 kind:
     component
 responsibility:
-    PARTIAL agent documentation. Installable skill packaging PLANNED
+    IMPLEMENTED repository-scoped Codex skill instructions
 level:
     L2
 git_scope:
@@ -21,7 +21,7 @@ retention:
 inputs:
     AGENTS.md and the MSS_MCP tool catalog
 outputs:
-    versioned agent operation guidance
+    mss-app-control and mss-development instructions
 depends_on:
     mss.api
     mss.mcp

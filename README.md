@@ -19,7 +19,7 @@ Makepad SandStudio 0.1.0-preview.1 is a Windows developer preview for running an
 | [MSS_Desktop](MSS_Desktop/README.md) | IMPLEMENTED in the Rust binary. The library target is a scaffold. |
 | [MSS_MCP](MSS_MCP/README.md) | IMPLEMENTED through Python and PowerShell. The Rust library is a scaffold. |
 | [MSS_Core](MSS_Core/README.md), [MSS_API](MSS_API/README.md), [MSS_Remote](MSS_Remote/README.md), [MSS_Render](MSS_Render/README.md), [MSS_SDK](MSS_SDK/README.md) | SCAFFOLD Rust targets. Current runtime responsibilities are documented in each module. |
-| [MSS_Skills](MSS_Skills/README.md) | PARTIAL. Repository guidance is available. |
+| [MSS_Skills](MSS_Skills/README.md) | IMPLEMENTED. Two repository-scoped Codex skills cover app control and MSS development. |
 
 [Architecture and process flow](doc/architecture.md) · [Maps](doc/maps.md) · [Tests](TESTING.md) · [Compatibility](doc/compatibility.md) · [Security](SECURITY.md) · [Known limitations](KNOWN_LIMITATIONS.md) · [License audit](LICENSE_AUDIT.md) · [Third-party notices](THIRD_PARTY_NOTICES.md)
 

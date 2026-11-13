@@ -1,6 +1,6 @@
 # Developer and agent rules
 
-Makepad SandStudio 0.1.0-preview.1 runs separate hidden Makepad applications on native Windows. [Architecture](doc/architecture.md), [Security](SECURITY.md), [Compatibility](doc/compatibility.md), [Testing](doc/testing.md) and [Structure](doc/dungeon.md) define the current boundaries. Read the relevant sections before changing a contract. [MSS_MCP](MSS_MCP/README.md) is the tool reference.
+Makepad SandStudio 0.1.0-preview.1 runs separate hidden Makepad applications on native Windows. [Architecture](doc/architecture.md), [Security](SECURITY.md), [Compatibility](doc/compatibility.md), [Testing](doc/testing.md) and [Structure](doc/dungeon.md) define the current boundaries. Read the relevant sections before changing a contract. [MSS_MCP](MSS_MCP/README.md) is the tool reference. [Repository skills](MSS_Skills/README.md) provide task workflows.
 
 ## AI Direct
 
