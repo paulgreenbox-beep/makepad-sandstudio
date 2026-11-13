@@ -617,34 +617,34 @@ checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
 
 [[package]]
 name = "mss-api"
-version = "0.1.0"
+version = "0.1.0-preview.1"
 
 [[package]]
 name = "mss-core"
-version = "0.1.0"
+version = "0.1.0-preview.1"
 
 [[package]]
 name = "mss-desktop"
-version = "0.1.0"
+version = "0.1.0-preview.1"
 dependencies = [
  "makepad-widgets",
 ]
 
 [[package]]
 name = "mss-mcp"
-version = "0.1.0"
+version = "0.1.0-preview.1"
 
 [[package]]
 name = "mss-remote"
-version = "0.1.0"
+version = "0.1.0-preview.1"
 
 [[package]]
 name = "mss-render"
-version = "0.1.0"
+version = "0.1.0-preview.1"
 
 [[package]]
 name = "mss-sdk"
-version = "0.1.0"
+version = "0.1.0-preview.1"
 
 [[package]]
 name = "naga"

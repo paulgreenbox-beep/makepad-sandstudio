@@ -2,3 +2,7 @@ MSS_MCP/tools/*.py text eol=lf
 MSS_MCP/tools/*.ps1 text eol=lf
 MSS_MCP/tests/* text eol=lf
 MSS_MCP/profiles/*.json text eol=lf
+*.rs text eol=lf
+Cargo.toml text eol=lf
+Cargo.lock text eol=lf
+*.wxs text eol=lf
