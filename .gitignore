@@ -15,3 +15,12 @@
 /MSS_MCP/profiles/local.*
 __pycache__/
 *.pyc
+/dist/
+*.msi
+*.wixobj
+*.wixpdb
+*.docx
+*.dwg
+*.xlsx
+*.pfx
+*.pem

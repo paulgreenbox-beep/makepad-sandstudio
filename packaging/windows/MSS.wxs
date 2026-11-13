@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*" Name="Makepad SandStudio 0.1.0-preview.1" Manufacturer="Makepad SandStudio contributors"
+           Language="1033" Version="0.1.1" UpgradeCode="1DC5CC56-4038-4F3B-AEF9-B8187697C8E1">
+    <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser" InstallPrivileges="limited" Platform="x64" />
+    <MediaTemplate EmbedCab="yes" />
+    <Property Id="INSTALLFOLDER" Secure="yes">
+      <RegistrySearch Id="FindInstalledFolder" Root="HKCU" Key="Software\MakepadSandStudio\Preview"
+                      Name="InstallFolder" Type="raw" Win64="yes" />
+    </Property>
+    <MajorUpgrade DowngradeErrorMessage="A newer Makepad SandStudio is already installed." />
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="LocalAppDataFolder">
+        <Directory Id="ProgramsFolder" Name="Programs">
+          <Directory Id="INSTALLFOLDER" Name="Makepad SandStudio Preview">
+            <Component Id="Desktop" Guid="ED46D99F-04F9-4553-A292-ED00479D63F6" Win64="yes">
+              <File Id="DesktopExe" Source="$(var.PayloadDir)\mss-desktop.exe" />
+              <RegistryValue Root="HKCU" Key="Software\MakepadSandStudio\Preview" Name="InstallFolder" Type="string" Value="[INSTALLFOLDER]" KeyPath="yes" />
+              <RemoveFolder Id="RemoveInstallFolder" On="uninstall" />
+              <RemoveFolder Id="RemoveProgramsFolderIfEmpty" Directory="ProgramsFolder" On="uninstall" />
+            </Component>
+            <Component Id="Documentation" Guid="5ED87BC4-44CD-4C40-9E5A-60808FB45E4A" Win64="yes">
+              <File Id="License" Source="$(var.PayloadDir)\LICENSE" />
+              <File Id="Notices" Source="$(var.PayloadDir)\THIRD_PARTY_NOTICES.md" />
+              <File Id="Configuration" Source="$(var.PayloadDir)\CONFIGURATION.md" />
+              <RegistryValue Root="HKCU" Key="Software\MakepadSandStudio\Preview" Name="Documentation" Type="integer" Value="1" KeyPath="yes" />
+            </Component>
+            <Directory Id="MssMcpDirectory" Name="MSS_MCP">
+              <Directory Id="MssToolsDirectory" Name="tools">
+                <Component Id="MssTools" Guid="915F8B88-670D-4F0E-AE21-AB6A11A1936D" Win64="yes">
+                  <File Id="Router" Source="$(var.PayloadDir)\MSS_MCP\tools\mss_universal.py" />
+                  <File Id="Profiles" Source="$(var.PayloadDir)\MSS_MCP\tools\mss_profiles.py" />
+                  <File Id="Builds" Source="$(var.PayloadDir)\MSS_MCP\tools\mss_builds.py" />
+                  <File Id="Processes" Source="$(var.PayloadDir)\MSS_MCP\tools\mss_process.py" />
+                  <File Id="Shared" Source="$(var.PayloadDir)\MSS_MCP\tools\mss_shared.py" />
+                  <File Id="Launcher" Source="$(var.PayloadDir)\MSS_MCP\tools\Start-MakepadMcp.ps1" />
+                  <RegistryValue Root="HKCU" Key="Software\MakepadSandStudio\Preview" Name="Router" Type="integer" Value="1" KeyPath="yes" />
+                  <RemoveFolder Id="RemoveMssToolsFolder" On="uninstall" />
+                  <RemoveFolder Id="RemoveMssMcpFolder" Directory="MssMcpDirectory" On="uninstall" />
+                </Component>
+              </Directory>
+            </Directory>
+          </Directory>
+        </Directory>
+      </Directory>
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="MssMenuFolder" Name="Makepad SandStudio Preview">
+          <Component Id="Shortcut" Guid="98D1CFD1-F2B4-4A98-AE09-103D4CE36621" Win64="yes">
+            <Shortcut Id="LaunchMss" Name="Makepad SandStudio Preview" Target="[INSTALLFOLDER]mss-desktop.exe" WorkingDirectory="INSTALLFOLDER" />
+            <RemoveFolder Id="RemoveMenuFolder" On="uninstall" />
+            <RegistryValue Root="HKCU" Key="Software\MakepadSandStudio\Preview" Name="Installed" Type="integer" Value="1" KeyPath="yes" />
+          </Component>
+        </Directory>
+      </Directory>
+    </Directory>
+    <Feature Id="Mss" Title="Makepad SandStudio" Level="1">
+      <ComponentRef Id="Desktop" />
+      <ComponentRef Id="Documentation" />
+      <ComponentRef Id="MssTools" />
+      <ComponentRef Id="Shortcut" />
+    </Feature>
+  </Product>
+</Wix>
