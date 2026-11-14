@@ -8,7 +8,7 @@ Makepad SandStudio 0.1.0-preview.1 is a Windows developer preview for running an
 
 ## Get started
 
-1. [Build from source or review the Windows MSI requirements](BUILDING.md). The installed preview requires external Python 3.12+ and PowerShell 7.4+ for the full app-launch flow. The current Windows binary package has unresolved clean-machine resource and notice checks.
+1. [Build from source or review the Windows MSI requirements](BUILDING.md). The installed preview requires external Python 3.12+ and PowerShell 7.4+ for the full app-launch flow. The local MSI passed installation, resource and notice checks on the development host. A separate clean Windows machine remains untested. See [Windows packaging](packaging/windows/README.md) for the binary distribution scope.
 2. [Configure a short local data root and admit a guest build](CONFIGURATION.md). The new catalog starts empty. Supply the guest EXE and the matching Makepad Remote with reviewed SHA-256 pins.
 3. [Use the Desktop viewer](MSS_Desktop/README.md) or [connect an agent to `mss`](MSS_MCP/README.md). See [AGENTS.md](AGENTS.md) for ownership and verification rules.
 
