@@ -4,13 +4,15 @@ from contextlib import contextmanager
 import ctypes
 import hashlib
 import json
-import msvcrt
 import os
 from pathlib import Path
 import re
 import stat
 import tempfile
 from time import monotonic, sleep
+
+if os.name == "nt":
+    import msvcrt
 
 
 BASELINE = "baseline"
@@ -153,6 +155,8 @@ class BuildRegistry:
 
     @contextmanager
     def _locked(self):
+        if os.name != "nt":
+            raise BuildError("UNSUPPORTED_PLATFORM", "The Windows build registry is unavailable on this platform.")
         try:
             _existing(self.directory.parent, directory=True)
             self.directory.mkdir(exist_ok=True)

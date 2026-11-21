@@ -1120,9 +1120,25 @@ class App:
             return self.record()
 
 
+_LINUX_PROBE_TOOLS = frozenset({"mss_server_info", "mss_list_apps"})
+
+
+class _LinuxProbeCatalog:
+    """No guest admission: do not open the Windows catalog on Linux."""
+
+    def __init__(self, repo):
+        self.repo = repo
+
+    @staticmethod
+    def apps():
+        return []
+
+
 class Router:
     def __init__(self, repo):
-        self.catalog = Catalog(repo, Path(sys.executable), data_root=os.environ.get("MSS_DATA_ROOT"))
+        self.linux_probe = sys.platform == "linux"
+        self.catalog = (_LinuxProbeCatalog(repo) if self.linux_probe else
+                        Catalog(repo, Path(sys.executable), data_root=os.environ.get("MSS_DATA_ROOT")))
         self.root = self.data_root / "proof" / "mss-universal" / "connections" / uuid4().hex
         self.apps = {}
         self.closed_apps = {}
@@ -1131,9 +1147,13 @@ class Router:
         self.shared = None
         self.apps_lock = RLock()
         self.stopping = False
-        process = process_identity(os.getpid())
-        seconds, fraction = divmod(process["birth"] - 116444736000000000, 10_000_000)
-        started = datetime.fromtimestamp(seconds, timezone.utc).strftime("%Y-%m-%dT%H:%M:%S") + f".{fraction:07d}Z"
+        if self.linux_probe:
+            # Informational router initialization time; not guest process identity.
+            started = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        else:
+            process = process_identity(os.getpid())
+            seconds, fraction = divmod(process["birth"] - 116444736000000000, 10_000_000)
+            started = datetime.fromtimestamp(seconds, timezone.utc).strftime("%Y-%m-%dT%H:%M:%S") + f".{fraction:07d}Z"
         snapshot = globals().get("_MSS_FROZEN_STARTUP")
         if snapshot is None:
             snapshot = {"capture_mode": "imported_test_context_NOT_ATTESTED", "modules": {},
@@ -1153,6 +1173,10 @@ class Router:
             "mss_version": "0.1.0-preview.1", "mss_commit": commit, "commit_is_runtime_revision": False,
             "source_manifest": snapshot,
         }
+
+        if self.linux_probe:
+            self.runtime_info.update(platform="linux", mode="stdio_probe", native_guest_launch=False,
+                                     server_started_utc_source="router_initialization")
 
     @property
     def data_root(self):
@@ -1483,6 +1507,9 @@ class Router:
 
     def run_tool(self, name, args):
         validate(name, args)
+        if getattr(self, "linux_probe", False):
+            require(name in _LINUX_PROBE_TOOLS, "UNSUPPORTED_PLATFORM",
+                    "Linux stdio probe does not launch, attach to, or control guests.")
         require(not getattr(self, "stopping", False) or name == "mss_close_app",
                 "CONNECTION_CLOSING", "This connection is closing.")
         if name == "mss_server_info":
@@ -1657,7 +1684,9 @@ class Router:
         if method == "ping":
             return response | {"result": {}}
         if self.initialized and method == "tools/list":
-            return response | {"result": {"tools": TOOLS}}
+            tools = ([entry for entry in TOOLS if entry["name"] in _LINUX_PROBE_TOOLS]
+                     if getattr(self, "linux_probe", False) else TOOLS)
+            return response | {"result": {"tools": tools}}
         if self.initialized and method == "tools/call":
             try:
                 outcome = self.run_tool(params.get("name"), params.get("arguments", {}))
@@ -1698,8 +1727,8 @@ class Router:
 
 
 def main():
-    if sys.platform != "win32" or len(sys.argv) != 1:
-        print("[mss] Use the local Windows stdio entry point without arguments.", file=sys.stderr)
+    if sys.platform not in {"win32", "linux"} or len(sys.argv) != 1:
+        print("[mss] Use the local stdio entry point without arguments (Windows or Linux probe).", file=sys.stderr)
         return 2
     router = Router(Path(__file__).resolve().parents[2])
     output_lock, slots = RLock(), BoundedSemaphore(24)

@@ -1,5 +1,7 @@
 # Makepad SandStudio (MSS)
 
+> For the experimental Linux branch, see [Linux AI Direct](doc/linux-preview.md). It runs the MCP stdio probe only; native guest launch and Desktop are not implemented.
+
 Makepad SandStudio 0.1.0-preview.1 is a Windows developer preview for running and observing independent hidden Makepad applications. It uses the guest's own Makepad Remote and renderer.
 
 - **Human View** is the native Desktop viewer. It shows app frames, supports viewport resize and addressed input on admitted windows, and lets the operator take screenshots and record a demonstration. The preview includes tested RudraOffice workflows and a read-only AI CAD view.
