@@ -1,6 +1,6 @@
 # Makepad SandStudio (MSS)
 
-> For the experimental Linux branch, see [Linux AI Direct](doc/linux-preview.md). It runs the MCP stdio probe only; native guest launch and Desktop are not implemented.
+> For the experimental Linux branch, see [Linux AI Direct](doc/linux-preview.md). It includes an opt-in owned Todo experiment over MCP; Desktop is not part of the Linux branch.
 
 Makepad SandStudio 0.1.0-preview.1 is a Windows developer preview for running and observing independent hidden Makepad applications. It uses the guest's own Makepad Remote and renderer.
 

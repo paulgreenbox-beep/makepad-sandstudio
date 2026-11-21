@@ -1,6 +1,6 @@
 # Verification contracts and preview evidence
 
-> The Linux branch also has a separate [stdio probe check](linux-preview.md). It does not qualify a native guest or the Windows runtime.
+> The Linux branch has [separate stdio, synthetic router and opt-in live Todo checks](linux-preview.md). They do not qualify the Windows runtime.
 
 [Run the source checks](../TESTING.md) · [Architecture](architecture.md) · [Security](../SECURITY.md)
 

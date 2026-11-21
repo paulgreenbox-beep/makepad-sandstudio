@@ -15,6 +15,8 @@ if __name__ == "__main__" and "_MSS_FROZEN_STARTUP" not in globals():
     _names = ("mss_universal", "mss_profiles", "mss_builds", "mss_process", "mss_shared")
     if any(_name in _sys.modules for _name in _names):
         raise RuntimeError("MSS source was imported before the startup snapshot")
+    if _sys.platform == "linux":
+        _names += ("mss_linux_process",)
     _frozen = {_name: ((_base / (_name + ".py")).read_bytes(), str(_base / (_name + ".py")))
                for _name in _names}
     _digests = {_name + ".py": {"sha256": _hashlib.sha256(_data[0]).hexdigest()}
@@ -57,6 +59,7 @@ import os
 from pathlib import Path
 from queue import Empty, Full, Queue
 import re
+import stat
 import struct
 import subprocess
 import sys
@@ -71,6 +74,8 @@ from mss_profiles import Catalog, LaunchPlan, SYSTEM_KEYS, check_pin, local_dire
 from mss_builds import BuildError
 from mss_process import confirm_app, is_live, process_identity
 from mss_shared import SharedError, Store
+if sys.platform == "linux":
+    from mss_linux_process import LinuxProcessError, OwnedLinuxApp, PinnedExecutable
 
 
 VERSIONS = ("2025-06-18", "2025-03-26", "2024-11-05")
@@ -484,6 +489,16 @@ class Peer:
                 plan.command, cwd=plan.cwd, env=plan.env, stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE, stderr=log, creationflags=subprocess.CREATE_NO_WINDOW,
             )
+        self._bind(self.process)
+
+    @classmethod
+    def from_process(cls, process):
+        peer = cls.__new__(cls)
+        peer._bind(process)
+        return peer
+
+    def _bind(self, process):
+        self.process = process
         self.sequence = 0
         self.lock = RLock()
         self.queue = Queue(maxsize=8)
@@ -1121,23 +1136,164 @@ class App:
 
 
 _LINUX_PROBE_TOOLS = frozenset({"mss_server_info", "mss_list_apps"})
+_LINUX_TODO_TOOLS = _LINUX_PROBE_TOOLS | {
+    "mss_launch_app", "mss_close_app", "mss_status", "mss_settled",
+    "mss_ui_find", "mss_ui_wait", "mss_ui_type", "mss_ui_act", "mss_grab",
+}
+_LINUX_PINS = ("MSS_LINUX_TODO_EXE", "MSS_LINUX_TODO_SHA256",
+               "MSS_LINUX_REMOTE_EXE", "MSS_LINUX_REMOTE_SHA256")
 
 
-class _LinuxProbeCatalog:
-    """No guest admission: do not open the Windows catalog on Linux."""
+class _LinuxTodoCatalog:
+    """One optional operator-supplied profile; never reads the Windows catalog."""
 
     def __init__(self, repo):
         self.repo = repo
+        self.guest = self.remote = self.cwd = None
+        self.config_error = None
+        inputs = [os.environ.get(name) for name in _LINUX_PINS]
+        if any(value is not None for value in inputs):
+            try:
+                if (not all(inputs) or not all(Path(inputs[i]).is_absolute() for i in (0, 2))
+                        or not all(re.fullmatch(r"[a-fA-F0-9]{64}", inputs[i]) for i in (1, 3))):
+                    raise LinuxProcessError("Set all four Linux executable path and SHA-256 variables.")
+                self.guest = PinnedExecutable(Path(inputs[0]), inputs[1])
+                self.remote = PinnedExecutable(Path(inputs[2]), inputs[3])
+                self.cwd = Path(os.environ.get("MSS_LINUX_TODO_CWD", str(Path(inputs[0]).parent)))
+                if not self.cwd.is_absolute():
+                    raise LinuxProcessError("Use an absolute Todo working directory.")
+            except (LinuxProcessError, OSError, ValueError):
+                self.config_error = "Check the absolute Todo/Remote paths and SHA-256 pins."
 
-    @staticmethod
-    def apps():
-        return []
+    @property
+    def configured(self):
+        return self.guest is not None and self.remote is not None and self.config_error is None
+
+    def apps(self):
+        return [{"profile": "todo", "title": "Makepad Todo (Linux experimental)", "access": "semantic"}] if self.configured else []
+
+
+class _LinuxTodoSession:
+    def __init__(self, app):
+        self.app = app
+        self.app_id = "app_" + uuid4().hex
+        self.peer = None
+        self.native_tools = set()
+        self.state = "STARTING"
+
+    def status(self):
+        self.app.verify()
+        data = native_json(self.peer.call("ui__status", {}))
+        require(isinstance(data, dict) and type(data.get("pid")) is int and data["pid"] == self.app.pid
+                and isinstance(data.get("w"), list) and bool(data["w"])
+                and all(isinstance(window, dict) and type(window.get("i")) is int for window in data["w"]),
+                "IDENTITY_UNVERIFIED", "Official Remote did not identify the owned Todo window.")
+        return data
+
+    def connect(self, remote):
+        self.peer = Peer.from_process(self.app.start_remote(remote))
+        hello = self.peer.request("initialize", {"protocolVersion": VERSIONS[0], "capabilities": {},
+                                  "clientInfo": {"name": "mss-linux-todo", "version": "1"}}, timeout=10)
+        require(hello.get("protocolVersion") == VERSIONS[0],
+                "REMOTE_ERROR", "Unexpected Makepad MCP protocol version.")
+        self.peer.send({"jsonrpc": "2.0", "method": "notifications/initialized"})
+        self.native_tools = {entry["name"] for entry in self.peer.request("tools/list", {}, timeout=10)["tools"]}
+        require({"ui__status", "ui__ui", "ui__ui_find", "ui__ui_act", "ui__grab"} <= self.native_tools,
+                "UNSUPPORTED", "Pinned Makepad Remote does not expose the needed Todo tools.")
+        self.status()
+        self.state = "READY"
+
+    def dispatch(self, name, args):
+        if name == "mss_close_app":
+            return result_json(self.close())
+        require(self.state in {"READY", "OUTCOME_UNKNOWN"}, "APP_UNAVAILABLE", "Todo is not ready.")
+        if name == "mss_status":
+            return result_json(self.status() | {"app_id": self.app_id, "state": self.state})
+        native, _, _, _, read = ROUTES[name]
+        require(native in self.native_tools, "UNSUPPORTED", "Makepad Remote does not expose this tool.")
+        args = {k: v for k, v in args.items() if k != "app_id"}
+        for unsupported in ("if_user_seq", "queue_timeout_ms", "preview"):
+            require(unsupported not in args, "UNSUPPORTED", "This option is outside the Linux Todo prototype.")
+        self.app.verify()
+        if not read:
+            require(self.state == "READY", "OUTCOME_UNKNOWN", "An earlier dispatch is uncertain; no action was replayed.")
+            tree = native_json(self.peer.call("ui__ui", {"node": args["node"], "w": args["w"], "json": True}))
+            nodes = [node for window in tree.get("trees", []) if window.get("window") == args["w"]
+                     for node in window.get("nodes", []) if node.get("id") == args["node"]]
+            action, path = (("replace_text", "todo_input") if name == "mss_ui_type" else ("press", "add_button"))
+            require(len(nodes) == 1 and nodes[0].get("path", "").rsplit(".", 1)[-1] == path
+                    and action in nodes[0].get("actions", "").split(","),
+                    "UNSUPPORTED", "Use the current Todo input or Add button from the selected window.")
+            if name == "mss_ui_act":
+                require(args.get("action") == "press" and set(args) <= {"node", "w", "action", "wait", "json"},
+                        "UNSUPPORTED", "Only the Todo Add button press is admitted.")
+            args.update(action=action, wait=True, json=True)
+        if name in {"mss_ui_find", "mss_ui_wait"}:
+            args["json"] = True
+            if name == "mss_ui_wait":
+                args.setdefault("timeout_ms", 5000)
+        if name == "mss_grab":
+            windows = self.status()["w"]
+            require(type(args.get("w")) is int and sum(item.get("i") == args["w"] for item in windows) == 1,
+                    "UNKNOWN_WINDOW", "Use the current Todo window ID from mss_status.")
+            output = self.app.directory / (uuid4().hex + ".png")
+            args["out"] = str(output)
+        try:
+            result = self.peer.call(native, args)
+        except (TransportFailure, ToolFailure) as error:
+            if read:
+                raise ToolFailure("REMOTE_ERROR", "Makepad read did not complete.") from error
+            self.state = "OUTCOME_UNKNOWN"
+            raise ToolFailure(self.state, "Makepad action was not confirmed; no request was replayed.") from error
+        if not read:
+            try:
+                return result_json({"effect": "NOT_VERIFIED", "dispatch": native_json(result)})
+            except ToolFailure as error:
+                self.state = "OUTCOME_UNKNOWN"
+                raise ToolFailure(self.state, "Makepad did not confirm the action; no request was replayed.") from error
+        data = native_json(result)
+        if name != "mss_grab":
+            return result_json(data)
+        require(isinstance(data, dict), "CAPTURE_UNVERIFIED", "Makepad did not return capture metadata.")
+        try:
+            image, = [part for part in result["content"] if part["type"] == "image"]
+            pixels = base64.b64decode(image["data"], validate=True)
+            require(image.get("mimeType") == "image/png" and len(pixels) >= 24
+                    and pixels[:8] == b"\x89PNG\r\n\x1a\n" and pixels[12:16] == b"IHDR",
+                    "CAPTURE_UNVERIFIED", "Makepad did not return a PNG.")
+            dimensions = list(struct.unpack(">II", pixels[16:24]))
+            digest = hashlib.sha256(pixels).hexdigest()
+            with os.fdopen(os.open(output, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK), "rb") as saved:
+                properties = os.fstat(saved.fileno())
+                require(stat.S_ISREG(properties.st_mode) and properties.st_nlink == 1
+                        and properties.st_size == len(pixels) and hashlib.file_digest(saved, "sha256").hexdigest() == digest,
+                        "CAPTURE_UNVERIFIED", "Remote PNG file and response differ.")
+            require(data.get("capture_kind") == "pixels" and data.get("png") == str(output)
+                    and data.get("sz") == dimensions and all(dimensions),
+                    "CAPTURE_UNVERIFIED", "Makepad capture metadata and owned PNG differ.")
+        except (OSError, KeyError, TypeError, ValueError) as error:
+            raise ToolFailure("CAPTURE_UNVERIFIED", "The owned Todo PNG could not be verified.") from error
+        reply = result_json(data | {"sha256": digest, "app_id": self.app_id, "w": args["w"]})
+        reply["content"].append(image)
+        return reply
+
+    def close(self):
+        if self.state in {"READY", "OUTCOME_UNKNOWN"} and "ui__quit" in self.native_tools:
+            try:
+                self.app.verify()
+                self.peer.request("tools/call", {"name": "ui__quit", "arguments": {}}, timeout=2)
+            except (LinuxProcessError, TransportFailure, ToolFailure):
+                pass
+        self.state = "CLEANUP_PENDING"
+        receipt = self.app.close()
+        self.state = "CLOSED"
+        return receipt | {"app_id": self.app_id, "pid": self.app.pid, "state": self.state}
 
 
 class Router:
     def __init__(self, repo):
         self.linux_probe = sys.platform == "linux"
-        self.catalog = (_LinuxProbeCatalog(repo) if self.linux_probe else
+        self.catalog = (_LinuxTodoCatalog(repo) if self.linux_probe else
                         Catalog(repo, Path(sys.executable), data_root=os.environ.get("MSS_DATA_ROOT")))
         self.root = self.data_root / "proof" / "mss-universal" / "connections" / uuid4().hex
         self.apps = {}
@@ -1175,8 +1331,12 @@ class Router:
         }
 
         if self.linux_probe:
-            self.runtime_info.update(platform="linux", mode="stdio_probe", native_guest_launch=False,
-                                     server_started_utc_source="router_initialization")
+            self.linux_todo = None
+            configured = self.catalog.configured
+            self.runtime_info.update(platform="linux", mode="todo_experimental" if configured else "stdio_probe",
+                                     native_guest_launch=configured, server_started_utc_source="router_initialization")
+            if self.catalog.config_error:
+                self.runtime_info["configuration_error"] = self.catalog.config_error
 
     @property
     def data_root(self):
@@ -1505,13 +1665,48 @@ class Router:
             store.finish(op["operation_id"], "OUTCOME_UNKNOWN", code="DISPATCH_EXCEPTION")
             raise
 
+    def linux_tools(self):
+        return _LINUX_TODO_TOOLS if self.catalog.configured else _LINUX_PROBE_TOOLS
+
+    def linux_dispatch(self, name, args):
+        try:
+            with self.apps_lock:
+                if name == "mss_launch_app":
+                    require(self.linux_todo is None, "APP_LIMIT", "Close the current owned Linux Todo first.")
+                    require(args["profile"] == "todo" and "build_id" not in args, "UNKNOWN_PROFILE",
+                            "Only the operator-configured Todo is available.")
+                    app = OwnedLinuxApp.launch(self.catalog.guest, cwd=self.catalog.cwd)
+                    session = self.linux_todo = _LinuxTodoSession(app)
+                    try:
+                        session.connect(self.catalog.remote)
+                    except BaseException:
+                        session.close()
+                        self.linux_todo = None
+                        raise
+                    return result_json({"app_id": session.app_id, "pid": app.pid, "state": session.state})
+                session = self.linux_todo
+                require(session is not None and args.get("app_id") == session.app_id, "UNKNOWN_APP",
+                        "Use the exact App ID owned by this connection.")
+                reply = session.dispatch(name, args)
+                if name == "mss_close_app":
+                    self.linux_todo = None
+                return reply
+        except LinuxProcessError as error:
+            state = self.linux_todo.state if self.linux_todo else ""
+            raise ToolFailure("CLEANUP_PENDING" if state == "CLEANUP_PENDING" else "LINUX_TODO_UNAVAILABLE",
+                              str(error)) from error
+        except TransportFailure as error:
+            raise ToolFailure("REMOTE_ERROR", "Makepad channel is unavailable.") from error
+
     def run_tool(self, name, args):
         validate(name, args)
-        if getattr(self, "linux_probe", False):
-            require(name in _LINUX_PROBE_TOOLS, "UNSUPPORTED_PLATFORM",
-                    "Linux stdio probe does not launch, attach to, or control guests.")
         require(not getattr(self, "stopping", False) or name == "mss_close_app",
                 "CONNECTION_CLOSING", "This connection is closing.")
+        if getattr(self, "linux_probe", False):
+            require(name in self.linux_tools(), "UNSUPPORTED_PLATFORM",
+                    "This tool is not enabled for the Linux AI Direct prototype.")
+            if name not in _LINUX_PROBE_TOOLS:
+                return self.linux_dispatch(name, args)
         if name == "mss_server_info":
             return result_json(json.loads(json.dumps(self.runtime_info)) | {
                 "mcp_protocol_version": self.mcp_protocol_version,
@@ -1684,7 +1879,7 @@ class Router:
         if method == "ping":
             return response | {"result": {}}
         if self.initialized and method == "tools/list":
-            tools = ([entry for entry in TOOLS if entry["name"] in _LINUX_PROBE_TOOLS]
+            tools = ([entry for entry in TOOLS if entry["name"] in self.linux_tools()]
                      if getattr(self, "linux_probe", False) else TOOLS)
             return response | {"result": {"tools": tools}}
         if self.initialized and method == "tools/call":
@@ -1700,6 +1895,13 @@ class Router:
 
     def close(self):
         ok = True
+        if getattr(self, "linux_todo", None) is not None:
+            try:
+                self.linux_todo.close()
+                self.linux_todo = None
+            except (LinuxProcessError, OSError):
+                print("[mss] Linux Todo cleanup remains pending.", file=sys.stderr)
+                ok = False
         for app in list(self.apps.values()):
             if app.participant:
                 try:
